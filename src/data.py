@@ -56,6 +56,28 @@ class TimeDomainData:
         return np.std(self.time[idxs])
 
     @classmethod
+    def from_array(cls, time, flux):
+        """ Read in the time and flux from a csv
+
+        Parameters
+        ----------
+        time, flux: np.ndarray
+            The time and flux arrays
+
+        """
+
+        if time.shape != flux.shape:
+            raise ValueError("TimeDomainData only valid equal-shape arrays")
+        if time.ndim > 1:
+            raise ValueError("TimeDomainData only valid for single-dimensional data")
+        if np.any(np.diff(time) < 0):
+            raise ValueError("TimeDomainData requires sorted data")
+        time_domain_data = TimeDomainData()
+        time_domain_data.time = time
+        time_domain_data.flux = flux
+        return time_domain_data
+
+    @classmethod
     def from_csv(cls, filename, pulse_number=None):
         """ Read in the time and flux from a csv
 
