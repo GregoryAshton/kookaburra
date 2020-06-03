@@ -47,12 +47,12 @@ class TimeDomainData:
 
     def estimate_pulse_time(self, f=0.5):
         """ Estimate the pulse time """
-        idxs = self.flux > f * self.max_time
+        idxs = self.flux > f * self.max_flux
         return np.mean(self.time[idxs])
 
     def estimate_pulse_width(self, f=0.5):
         """ Estimate the pulse time """
-        idxs = self.flux > f * self.max_time
+        idxs = self.flux > f * self.max_flux
         return np.std(self.time[idxs])
 
     @classmethod
