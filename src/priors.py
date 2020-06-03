@@ -1,4 +1,4 @@
-from bilby.core.prior import Prior, Uniform, PriorDict
+from bilby.core.prior import Prior, Uniform, PriorDict, LogUniform
 
 
 def get_priors(args, data):
@@ -15,7 +15,13 @@ def get_priors(args, data):
         data.estimate_pulse_time() + 0.5 * data.estimate_pulse_width(),
         "toa", latex_label="TOA")
 
-    priors['beta'] = Uniform(0, args.beta_max, 'beta', latex_label=r'$\beta$')
+    if args.beta_type == "uniform":
+        priors['beta'] = Uniform(
+            args.beta_min, args.beta_max, 'beta', latex_label=r'$\beta$')
+    elif args.beta_type == "log-uniform":
+        priors['beta'] = LogUniform(
+            args.beta_min, args.beta_max, 'beta', latex_label=r'$\beta$')
+
     for i in range(args.n_shapelets):
         key = 'C{}'.format(i)
         priors[key] = SpikeAndSlab(

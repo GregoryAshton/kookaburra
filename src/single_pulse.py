@@ -57,7 +57,14 @@ def get_args():
         "--base-flux", action="store_true", help="Infer a base flux"
     )
     prior_parser.add_argument(
+        "--beta-min", type=float, default=1e-10, help="Minimum beta value"
+    )
+    prior_parser.add_argument(
         "--beta-max", type=float, default=1e-3, help="Maximum beta value"
+    )
+    prior_parser.add_argument(
+        "--beta-type", type=str, default="log-uniform", help="Beta-prior",
+        choices=["uniform", "log-uniform"]
     )
     prior_parser.add_argument(
         "--c-max-multiplier",
