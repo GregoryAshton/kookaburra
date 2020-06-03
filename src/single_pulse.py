@@ -1,6 +1,7 @@
 """ Command line tool for single-pulse shapelet analysis """
-import os
 import argparse
+import os
+import logging
 
 import bilby
 import numpy as np
@@ -74,6 +75,9 @@ def get_args():
     )
     prior_parser.add_argument(
         "--c-mix", type=float, default=0.5, help="Mixture between spike and slab"
+    )
+    prior_parser.add_argument(
+        "--toa-width", type=float, default=0.1, help="Duration fraction for time prior"
     )
 
     sampler_parser = parser.add_argument_group("Sampler options")
@@ -190,6 +194,10 @@ def save(args, data, result, result_null):
 
 
 def main():
+
+    logger = logging.getLogger('single_pulse')
+    logger.setLevel(logging.INFO)
+
     args = get_args()
 
     args.outdir = "outdir_single_pulse_{}".format(args.pulse_number)
@@ -198,14 +206,17 @@ def main():
 
     model = SinglePulseFluxModel(n_shapelets=args.n_shapelets)
 
-    data = TimeDomainData.from_csv(args.data_file, pulse_number=args.pulse_number)
+    logger.info(f"Reading data from {args.data_file}")
+    data = TimeDomainData.from_file(args.data_file, pulse_number=args.pulse_number)
 
     priors = get_priors(args, data)
 
     # Pre-plot the data and prior window
     if args.plot_fit:
+        logger.info("Pre-plot the data")
         data.plot_fit(None, model, priors, outdir=args.outdir, label=args.label)
 
+    logger.info("Run the analysis")
     result, result_null = run_analysis(args, data, model, priors)
 
     if args.plot_corner:

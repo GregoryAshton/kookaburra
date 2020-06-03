@@ -10,10 +10,12 @@ def get_priors(args, data):
     else:
         priors["base_flux"] = 0
 
-    priors['toa'] = Uniform(
-        data.estimate_pulse_time() - 0.5 * data.estimate_pulse_width(),
-        data.estimate_pulse_time() + 0.5 * data.estimate_pulse_width(),
-        "toa", latex_label="TOA")
+    if args.toa_width < 1:
+        t0 = data.estimate_pulse_time()
+        dt = data.duration * args.toa_width
+        priors['toa'] = Uniform(t0 - dt, t0 + dt, "toa", latex_label="TOA")
+    else:
+        priors['toa'] = Uniform(data.start, data.end, "toa", latex_label="TOA")
 
     if args.beta_type == "uniform":
         priors['beta'] = Uniform(

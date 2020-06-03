@@ -45,14 +45,14 @@ class TimeDomainData:
         """ Return the time of the maximum flux """
         return self.time[np.argmax(self.flux)]
 
-    def estimate_pulse_time(self, f=0.5):
+    def estimate_pulse_time(self, f=0.75):
         """ Estimate the pulse time """
-        idxs = self.flux > f * self.max_flux
+        idxs = np.abs(self.flux) > f * self.max_flux
         return np.mean(self.time[idxs])
 
-    def estimate_pulse_width(self, f=0.5):
+    def estimate_pulse_width(self, f=0.75):
         """ Estimate the pulse time """
-        idxs = self.flux > f * self.max_flux
+        idxs = np.abs(self.flux) > f * self.max_flux
         return np.std(self.time[idxs])
 
     @classmethod
@@ -92,6 +92,38 @@ class TimeDomainData:
         df = pd.read_csv(filename)
         return cls._sort_and_filter_dataframe(df, pulse_number)
 
+    @classmethod
+    def from_file(cls, filename, pulse_number=None):
+        """ Read in the time and flux from file
+
+        Parameters
+        ----------
+        filename: str
+            The path to the file to read
+        pulse_number: int:
+            The pulse number to truncate.
+
+        """
+        if "h5" in filename:
+            return cls.from_h5(filename, pulse_number)
+        else:
+            return cls.from_csv(filename, pulse_number)
+
+    @classmethod
+    def from_h5(cls, filename, pulse_number=None):
+        """ Read in the time and flux from a pandas h5 file
+
+        Parameters
+        ----------
+        filename: str
+            The path to the file to read
+        pulse_number: int:
+            The pulse number to truncate.
+
+        """
+        df = pd.read_hdf(filename)
+        return cls._sort_and_filter_dataframe(df, pulse_number)
+
     @staticmethod
     def _sort_and_filter_dataframe(df, pulse_number):
         df = df.sort_values("time")
@@ -100,6 +132,7 @@ class TimeDomainData:
         time_domain_data = TimeDomainData()
         time_domain_data.time = df.time.values
         time_domain_data.flux = df.flux.values
+        del df
         return time_domain_data
 
     def plot_max_likelihood(self, result=None, model=None, xlims=None):
