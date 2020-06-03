@@ -77,7 +77,8 @@ def get_args():
         "--c-mix", type=float, default=0.5, help="Mixture between spike and slab"
     )
     prior_parser.add_argument(
-        "--toa-width", type=float, default=0.1, help="Duration fraction for time prior"
+        "--toa-width", type=float, default=1,
+        help="Duration fraction for time prior. If 1, the whole data span used."
     )
 
     sampler_parser = parser.add_argument_group("Sampler options")
@@ -137,7 +138,7 @@ def run_analysis(args, data, model, priors):
     return result, result_null
 
 
-def save(args, data, result, result_null):
+def save(args, data, result, result_null, outdir):
     rows = [
         "pulse_number",
         "toa",
@@ -150,8 +151,8 @@ def save(args, data, result, result_null):
         "sigma_std",
         "log_evidence",
         "log_evidence_err",
-        "log_null_evidence",
-        "log_null_evidence_err",
+        "log_noise_evidence",
+        "log_noise_evidence_err",
         "toa_prior_width",
         "normal_p_value",
     ]
@@ -159,9 +160,7 @@ def save(args, data, result, result_null):
         rows.append("C{}".format(i))
         rows.append("C{}_err".format(i))
 
-    summary_outdir = "single_pulse_summary"
-    bilby.core.utils.check_directory_exists_and_if_not_mkdir(summary_outdir)
-    filename = "{}/{}_shapelets.summary".format(summary_outdir, args.n_shapelets)
+    filename = f"{outdir}/{args.n_shapelets}_shapelets.summary"
     if os.path.isfile(filename) is False:
         with open(filename, "w+") as f:
             f.write(",".join(rows) + "\n")
@@ -200,9 +199,9 @@ def main():
 
     args = get_args()
 
-    args.outdir = "outdir_single_pulse_{}".format(args.pulse_number)
+    args.outdir = "outdir_single_pulse"
     bilby.core.utils.check_directory_exists_and_if_not_mkdir(args.outdir)
-    args.label = "single_pulse_{}_shapelets".format(args.n_shapelets)
+    args.label = "pulse_{}_shapelets_{}".format(args.pulse_number, args.n_shapelets)
 
     model = SinglePulseFluxModel(n_shapelets=args.n_shapelets)
 

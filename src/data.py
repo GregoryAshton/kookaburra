@@ -253,11 +253,13 @@ class TimeDomainData:
         ax2.set_xlabel("Time - {} [days]".format(tref))
         ax2.set_ylabel("Flux residual")
 
+        if result is not None:
+            filename = "{}/{}_fit_with_data.png".format(outdir, label)
+        else:
+            filename = "{}/{}_data.png".format(outdir, label)
+
         fig.tight_layout()
-        fig.savefig(
-            "{}/{}_fit_with_data.png".format(outdir, label),
-            dpi=600
-        )
+        fig.savefig(filename, dpi=600)
 
     @property
     def normal_pvalue(self):
