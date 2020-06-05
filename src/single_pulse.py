@@ -6,6 +6,7 @@ import logging
 import bilby
 import numpy as np
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 from .flux_model import SinglePulseFluxModel
 from .data import TimeDomainData
@@ -202,6 +203,18 @@ def save(args, data, result, result_null, outdir):
         f.write(",".join([str(el) for el in row_list]) + "\n")
 
 
+def plot_coeffs(result, args):
+    coeffs = [f"C{ii}" for ii in range(1, args.n_shapelets)]
+    samples = result.posterior[coeffs].values
+    bins = np.linspace(np.min(samples[samples > 0]), np.max(samples))
+    fig, ax = plt.subplots()
+    for CC in coeffs:
+        ax.hist(result.posterior[CC], bins=bins, alpha=0.5, label=CC)
+    ax.set_xlabel("Coefficient amplitudes")
+    ax.legend()
+    fig.savefig(f"{args.outdir}/{args.label}_coefficients")
+
+
 def main():
 
     logger = logging.getLogger('single_pulse')
@@ -229,7 +242,9 @@ def main():
     result, result_null = run_analysis(args, data, model, priors)
 
     if args.plot_corner:
-        result.plot_corner(priors=True)
+        parameters = ["toa", "beta", "sigma", "C0"]
+        result.plot_corner(parameters=parameters, priors=True)
+        plot_coeffs(result, args)
 
     if args.plot_fit:
         data.plot_fit(result, model, priors, outdir=args.outdir, label=args.label)

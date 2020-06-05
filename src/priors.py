@@ -30,7 +30,7 @@ def get_priors(args, data):
             slab=Uniform(0, args.c_max_multiplier * data.max_flux),
             name=key, mix=args.c_mix)
 
-    priors['sigma'] = Uniform(0, data.max_flux, 'sigma')
+    priors['sigma'] = Uniform(0, data.max_flux, 'sigma', latex_label="$\sigma$")
     return priors
 
 
