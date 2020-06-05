@@ -88,6 +88,11 @@ def get_args():
     sampler_parser.add_argument(
         "--nlive", type=int, default=500, help="Number of live points to use"
     )
+    sampler_parser.add_argument(
+        "--sampler-kwargs", type=str,
+        help="Arbitrary kwargs dict to pass to the sampler"
+    )
+
 
     args, _ = parser.parse_known_args()
 
@@ -97,7 +102,12 @@ def get_args():
 def run_analysis(args, data, model, priors):
     likelihood = PulsarLikelihood(data, model)
 
-    run_sampler_kwargs = dict(sampler=args.sampler, nlive=args.nlive,)
+    run_sampler_kwargs = dict(
+        sampler=args.sampler, nlive=args.nlive)
+
+    if args.sampler_kwargs:
+        run_sampler_kwargs.update(eval(args.sampler_kwargs))
+
 
     result = bilby.sampler.run_sampler(
         likelihood=likelihood,
@@ -224,4 +234,4 @@ def main():
     if args.plot_fit:
         data.plot_fit(result, model, priors, outdir=args.outdir, label=args.label)
 
-    save(args, data, result, result_null)
+    save(args, data, result, result_null, args.outdir)
