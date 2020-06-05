@@ -62,10 +62,10 @@ def get_args():
         "--beta-min", type=float, default=1e-10, help="Minimum beta value"
     )
     prior_parser.add_argument(
-        "--beta-max", type=float, default=1e-3, help="Maximum beta value"
+        "--beta-max", type=float, default=1e-6, help="Maximum beta value"
     )
     prior_parser.add_argument(
-        "--beta-type", type=str, default="log-uniform", help="Beta-prior",
+        "--beta-type", type=str, default="uniform", help="Beta-prior",
         choices=["uniform", "log-uniform"]
     )
     prior_parser.add_argument(
@@ -87,7 +87,7 @@ def get_args():
         "--sampler", type=str, default="pymultinest", help="Sampler to use"
     )
     sampler_parser.add_argument(
-        "--nlive", type=int, default=500, help="Number of live points to use"
+        "--nlive", type=int, default=1000, help="Number of live points to use"
     )
     sampler_parser.add_argument(
         "--sampler-kwargs", type=str,
