@@ -56,7 +56,7 @@ def get_args():
 
     prior_parser = parser.add_argument_group("Prior options")
     prior_parser.add_argument(
-        "--base-flux", action="store_true", help="Infer a base flux"
+        "--no-base-flux", action="store_true", help="Fix base flux to zero"
     )
     prior_parser.add_argument(
         "--beta-min", type=float, default=1e-10, help="Minimum beta value"
@@ -244,7 +244,8 @@ def main():
     if args.plot_corner:
         parameters = ["toa", "beta", "sigma", "C0"]
         result.plot_corner(parameters=parameters, priors=True)
-        plot_coeffs(result, args)
+        if args.n_shapelets > 1:
+            plot_coeffs(result, args)
 
     if args.plot_fit:
         data.plot_fit(result, model, priors, outdir=args.outdir, label=args.label)

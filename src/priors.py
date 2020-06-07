@@ -4,11 +4,11 @@ from bilby.core.prior import Prior, Uniform, PriorDict, LogUniform
 def get_priors(args, data):
     priors = PriorDict()
 
-    if args.base_flux:
+    if args.no_base_flux:
+        priors["base_flux"] = 0
+    else:
         priors['base_flux'] = Uniform(
             0, data.max_flux, 'base_flux', latex_label='base flux')
-    else:
-        priors["base_flux"] = 0
 
     if args.toa_width < 1:
         t0 = data.estimate_pulse_time()
