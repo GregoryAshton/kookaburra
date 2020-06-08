@@ -244,8 +244,9 @@ class TimeDomainData:
             ax2.plot(times, self.flux - maxl, "C0", lw=0.5, zorder=100)
 
             # Auto-zoom to interesting region
-            maxl_peak = np.max(maxl)
-            times_near_peak = times[np.abs(maxl) > 1e-7 * maxl_peak]
+            maxl_res = np.abs(maxl) - np.mean(result.posterior["base_flux"])
+            maxl_peak = np.max(maxl_res)
+            times_near_peak = times[maxl_res > 1e-3 * maxl_peak]
             if len(times_near_peak) > 1:
                 ax1.set_xlim(np.min(times_near_peak), np.max(times_near_peak))
 

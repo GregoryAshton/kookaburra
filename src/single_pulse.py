@@ -13,11 +13,13 @@ from .data import TimeDomainData
 from .likelihood import PulsarLikelihood, NullLikelihood
 from .priors import get_priors
 
-# Setup some matplotlib defaults
-mpl.rcParams["font.family"] = "serif"
-mpl.rcParams["font.serif"] = "Computer Modern"
-mpl.rcParams["text.usetex"] = "True"
-mpl.rcParams["text.latex.preamble"] = r"\newcommand{\mathdefault}[1][]{}"
+
+def set_rcparams():
+    # Setup some matplotlib defaults
+    mpl.rcParams["font.family"] = "serif"
+    mpl.rcParams["font.serif"] = "Computer Modern"
+    mpl.rcParams["text.usetex"] = "True"
+    mpl.rcParams["text.latex.preamble"] = r"\newcommand{\mathdefault}[1][]{}"
 
 
 def get_args():
@@ -53,6 +55,7 @@ def get_args():
         "--plot-fit", action="store_true", help="Create residual plots"
     )
     plot_parser.add_argument("--plot-run", action="store_true", help="Create run plots")
+    plot_parser.add_argument("--pretty", action="store_true", help="")
 
     prior_parser = parser.add_argument_group("Prior options")
     prior_parser.add_argument(
@@ -221,6 +224,9 @@ def main():
     logger.setLevel(logging.INFO)
 
     args = get_args()
+
+    if args.pretty:
+        set_rcparams()
 
     args.outdir = "outdir_single_pulse"
     bilby.core.utils.check_directory_exists_and_if_not_mkdir(args.outdir)

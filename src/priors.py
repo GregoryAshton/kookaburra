@@ -27,7 +27,7 @@ def get_priors(args, data):
     for i in range(args.n_shapelets):
         key = 'C{}'.format(i)
         priors[key] = SpikeAndSlab(
-            slab=Uniform(0, args.c_max_multiplier * data.max_flux),
+            slab=Uniform(1e-20 * data.max_flux, args.c_max_multiplier * data.max_flux),
             name=key, mix=args.c_mix)
 
     priors['sigma'] = Uniform(0, data.max_flux, 'sigma', latex_label="$\sigma$")
