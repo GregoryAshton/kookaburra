@@ -46,14 +46,22 @@ class TimeDomainData:
         return self.time[np.argmax(self.flux)]
 
     def estimate_pulse_time(self, f=0.75):
-        """ Estimate the pulse time """
+        """ Naive estimate of the pulse time
+
+        Uses the mean of flux above a fraction f of the maximum fluc
+
+        Parameters
+        ----------
+        f: float
+            The fraction to use
+
+        Returns
+        -------
+        pulse_time: float
+            An estimate of the pulse time
+        """
         idxs = np.abs(self.flux) > f * self.max_flux
         return np.mean(self.time[idxs])
-
-    def estimate_pulse_width(self, f=0.75):
-        """ Estimate the pulse time """
-        idxs = np.abs(self.flux) > f * self.max_flux
-        return np.std(self.time[idxs])
 
     @classmethod
     def from_array(cls, time, flux):
@@ -65,6 +73,9 @@ class TimeDomainData:
             The time and flux arrays
 
         """
+
+        time = np.atleast_1d(time)
+        flux = np.atleast_1d(flux)
 
         if time.shape != flux.shape:
             raise ValueError("TimeDomainData only valid equal-shape arrays")
