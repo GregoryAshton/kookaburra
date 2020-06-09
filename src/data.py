@@ -41,6 +41,16 @@ class TimeDomainData:
         return np.max(self.flux)
 
     @property
+    def min_flux(self):
+        """ Return the maximum flux """
+        return np.min(self.flux)
+
+    @property
+    def range_flux(self):
+        """ Return the maximum flux """
+        return self.max_flux - self.min_flux
+
+    @property
     def max_time(self):
         """ Return the time of the maximum flux """
         return self.time[np.argmax(self.flux)]
@@ -179,7 +189,7 @@ class TimeDomainData:
             "{}/{}_maxl_with_data.png".format(result.outdir, result.label), dpi=500
         )
 
-    def plot_fit(self, result, model, priors, outdir, label, tref=None):
+    def plot_fit(self, result, model, priors, outdir, label, tref=None, width="auto"):
         """ Plot the data and the fit and a residual
 
         Parameters
@@ -254,12 +264,19 @@ class TimeDomainData:
                 color='C1', alpha=0.5, zorder=0)
             ax2.plot(times, self.flux - maxl, "C0", lw=0.5, zorder=100)
 
-            # Auto-zoom to interesting region
-            maxl_res = np.abs(maxl) - np.mean(result.posterior["base_flux"])
-            maxl_peak = np.max(maxl_res)
-            times_near_peak = times[maxl_res > 1e-3 * maxl_peak]
-            if len(times_near_peak) > 1:
-                ax1.set_xlim(np.min(times_near_peak), np.max(times_near_peak))
+            if width == "auto":
+                # Auto-zoom to interesting region
+                maxl_res = np.abs(maxl) - np.mean(result.posterior["B0"])
+                maxl_peak = np.max(maxl_res)
+                times_near_peak = times[maxl_res > 1e-3 * maxl_peak]
+                if len(times_near_peak) > 1:
+                    ax1.set_xlim(
+                        np.min(times_near_peak), np.max(times_near_peak))
+            elif width == "full":
+                pass
+            else:
+                width = np.float(width)
+                ax1.set_xlim(- .5 * width, + .5 * width)
 
         ax1.set_ylabel("Flux")
         ax2.set_xlabel("Time - {} [days]".format(tref))

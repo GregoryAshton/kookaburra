@@ -37,7 +37,8 @@ def get_args():
         type=int,
         default=None,
         required=False,
-        help="The pulse number to analyse. If not given, no pulse-number filter is applied",
+        help=("The pulse number to analyse. If not given, no pulse-number "
+              "filter is applied"),
     )
     shape_parser.add_argument(
         "-s",
@@ -54,12 +55,18 @@ def get_args():
     plot_parser.add_argument(
         "--plot-fit", action="store_true", help="Create residual plots"
     )
-    plot_parser.add_argument("--plot-run", action="store_true", help="Create run plots")
+    plot_parser.add_argument(
+        "--plot-fit-width", type=str, default='auto',
+        help="Width of the fit plot. Options: `auto` or a float (fixed width)"
+    )
+    plot_parser.add_argument(
+        "--plot-run", action="store_true",
+        help="Create run plots if available")
     plot_parser.add_argument("--pretty", action="store_true", help="")
 
     prior_parser = parser.add_argument_group("Prior options")
     prior_parser.add_argument(
-        "--no-base-flux", action="store_true", help="Fix base flux to zero"
+        "--base-flux-polynomial-max", default=3, type=int,
     )
     prior_parser.add_argument(
         "--beta-min", type=float, default=1e-10, help="Minimum beta value"
@@ -68,8 +75,8 @@ def get_args():
         "--beta-max", type=float, default=1e-6, help="Maximum beta value"
     )
     prior_parser.add_argument(
-        "--beta-type", type=str, default="uniform", help="Beta-prior",
-        choices=["uniform", "log-uniform"]
+        "--beta-type", type=str, default="normal", help="Beta-prior",
+        choices=["normal", "uniform", "log-uniform"]
     )
     prior_parser.add_argument(
         "--c-max-multiplier",
@@ -96,9 +103,11 @@ def get_args():
         "--sampler-kwargs", type=str,
         help="Arbitrary kwargs dict to pass to the sampler"
     )
+    sampler_parser.add_argument(
+        "-c", "--clean", action="store_true",
+    )
 
-
-    args, _ = parser.parse_known_args()
+    args = parser.parse_args()
 
     return args
 
@@ -112,7 +121,6 @@ def run_analysis(args, data, model, priors):
     if args.sampler_kwargs:
         run_sampler_kwargs.update(eval(args.sampler_kwargs))
 
-
     result = bilby.sampler.run_sampler(
         likelihood=likelihood,
         priors=priors,
@@ -120,6 +128,7 @@ def run_analysis(args, data, model, priors):
         save=False,
         outdir=args.outdir,
         check_point_plot=args.plot_run,
+        clean=args.clean,
         **run_sampler_kwargs
     )
 
@@ -128,8 +137,9 @@ def run_analysis(args, data, model, priors):
 
     priors_null = bilby.core.prior.PriorDict()
     priors_null["sigma"] = priors["sigma"]
-    priors_null["base_flux"] = priors["base_flux"]
-    likelihood_null = NullLikelihood(data)
+    for ii in range(args.base_flux_polynomial_max):
+        priors_null[f"B{ii}"] = priors[f"B{ii}"]
+    likelihood_null = NullLikelihood(data, model)
     result_null = bilby.sampler.run_sampler(
         likelihood=likelihood_null,
         priors=priors_null,
@@ -138,6 +148,7 @@ def run_analysis(args, data, model, priors):
         save=False,
         check_point=True,
         check_point_plot=False,
+        clean=args.clean,
         verbose=False,
         **run_sampler_kwargs
     )
@@ -157,8 +168,6 @@ def save(args, data, result, result_null, outdir):
         "pulse_number",
         "toa",
         "toa_std",
-        "base_flux",
-        "base_flux_std",
         "beta",
         "beta_std",
         "sigma",
@@ -174,6 +183,10 @@ def save(args, data, result, result_null, outdir):
         rows.append("C{}".format(i))
         rows.append("C{}_err".format(i))
 
+    for i in range(args.base_flux_polynomial_max):
+        rows.append("B{}".format(i))
+        rows.append("B{}_err".format(i))
+
     filename = f"{outdir}/{args.n_shapelets}_shapelets.summary"
     if os.path.isfile(filename) is False:
         with open(filename, "w+") as f:
@@ -185,8 +198,6 @@ def save(args, data, result, result_null, outdir):
         args.pulse_number,
         p.toa.median(),
         p.toa.std(),
-        p.base_flux.median(),
-        p.base_flux.std(),
         p.beta.median(),
         p.beta.std(),
         p.sigma.median(),
@@ -201,6 +212,10 @@ def save(args, data, result, result_null, outdir):
     for i in range(args.n_shapelets):
         row_list.append(p["C{}".format(i)].mean())
         row_list.append(p["C{}".format(i)].std())
+
+    for i in range(args.base_flux_polynomial_max):
+        row_list.append(p["B{}".format(i)].mean())
+        row_list.append(p["B{}".format(i)].std())
 
     with open(filename, "a") as f:
         f.write(",".join([str(el) for el in row_list]) + "\n")
@@ -218,6 +233,12 @@ def plot_coeffs(result, args):
     fig.savefig(f"{args.outdir}/{args.label}_coefficients")
 
 
+def plot_base_flux(result, args):
+    parameters = [key for key in result.priors if "B" in key]
+    result.plot_corner(
+        parameters, filename=f"{args.outdir}/{args.label}_baseflux_corner")
+
+
 def main():
 
     logger = logging.getLogger('single_pulse')
@@ -232,7 +253,9 @@ def main():
     bilby.core.utils.check_directory_exists_and_if_not_mkdir(args.outdir)
     args.label = "pulse_{}_shapelets_{}".format(args.pulse_number, args.n_shapelets)
 
-    model = SinglePulseFluxModel(n_shapelets=args.n_shapelets)
+    model = SinglePulseFluxModel(
+        n_shapelets=args.n_shapelets,
+        n_base_flux=args.base_flux_polynomial_max)
 
     logger.info(f"Reading data from {args.data_file}")
     data = TimeDomainData.from_file(args.data_file, pulse_number=args.pulse_number)
@@ -252,8 +275,10 @@ def main():
         result.plot_corner(parameters=parameters, priors=True)
         if args.n_shapelets > 1:
             plot_coeffs(result, args)
+        plot_base_flux(result, args)
 
     if args.plot_fit:
-        data.plot_fit(result, model, priors, outdir=args.outdir, label=args.label)
+        data.plot_fit(result, model, priors, outdir=args.outdir, label=args.label,
+                      width=args.plot_fit_width)
 
     save(args, data, result, result_null, args.outdir)

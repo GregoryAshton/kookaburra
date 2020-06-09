@@ -3,7 +3,7 @@ import numpy as np
 
 
 class NullLikelihood(bilby.core.likelihood.Likelihood):
-    def __init__(self, data):
+    def __init__(self, data, model):
         """
         A Gaussian likelihood for fitting a null to the flux data
 
@@ -14,14 +14,16 @@ class NullLikelihood(bilby.core.likelihood.Likelihood):
         """
 
         self.parameters = dict(sigma=None)
+        self.parameters.update({key: None for key in model.base_keys})
         bilby.core.likelihood.Likelihood.__init__(self, dict.fromkeys(self.parameters))
 
         self.x = data.time
         self.y = data.flux
+        self.model = model
 
     def log_likelihood(self):
         sigma = self.parameters["sigma"]
-        base_flux = self.parameters["base_flux"]
+        base_flux = self.model.get_base_flux(self.x, self.parameters)
         residual = self.y - base_flux
         log_l = np.sum(
             - .5 * ((residual / sigma) ** 2 + np.log(2 * np.pi * sigma ** 2))
