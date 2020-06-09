@@ -5,21 +5,15 @@ import logging
 
 import bilby
 import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 
-from .flux_model import SinglePulseFluxModel
+from . import flux
+from . import plot
 from .data import TimeDomainData
-from .likelihood import PulsarLikelihood, NullLikelihood
-from .priors import get_priors
+from .likelihood import PulsarLikelihood
 
 
-def set_rcparams():
-    # Setup some matplotlib defaults
-    mpl.rcParams["font.family"] = "serif"
-    mpl.rcParams["font.serif"] = "Computer Modern"
-    mpl.rcParams["text.usetex"] = "True"
-    mpl.rcParams["text.latex.preamble"] = r"\newcommand{\mathdefault}[1][]{}"
+logger = logging.getLogger('single_pulse')
+logger.setLevel(logging.INFO)
 
 
 def get_args():
@@ -30,8 +24,12 @@ def get_args():
 
     parser.add_argument("data_file", type=str, help="The data file")
 
-    shape_parser = parser.add_argument_group("Shapelets options")
-    shape_parser.add_argument(
+    parser.add_argument("--outdir", type=str, help="The output directory",
+                        default="outdir")
+    parser.add_argument("--label", type=str, help="Extra label elements",
+                        default=None)
+
+    parser.add_argument(
         "-p",
         "--pulse-number",
         type=int,
@@ -40,12 +38,15 @@ def get_args():
         help=("The pulse number to analyse. If not given, no pulse-number "
               "filter is applied"),
     )
-    shape_parser.add_argument(
+    parser.add_argument(
         "-s",
         "--n-shapelets",
         type=int,
         required=True,
         help="Required: the number of shapelets to fit.",
+    )
+    parser.add_argument(
+        "-b", "--base-flux-n-polynomial", default=1, type=int,
     )
 
     plot_parser = parser.add_argument_group("Output options")
@@ -54,6 +55,9 @@ def get_args():
     )
     plot_parser.add_argument(
         "--plot-fit", action="store_true", help="Create residual plots"
+    )
+    plot_parser.add_argument(
+        "--plot-data", action="store_true", help="Create initial data plots"
     )
     plot_parser.add_argument(
         "--plot-fit-width", type=str, default='auto',
@@ -66,17 +70,14 @@ def get_args():
 
     prior_parser = parser.add_argument_group("Prior options")
     prior_parser.add_argument(
-        "--base-flux-polynomial-max", default=3, type=int,
+        "--beta-min", type=float, default=None, help="Minimum beta value"
     )
     prior_parser.add_argument(
-        "--beta-min", type=float, default=1e-10, help="Minimum beta value"
+        "--beta-max", type=float, default=None, help="Maximum beta value"
     )
     prior_parser.add_argument(
-        "--beta-max", type=float, default=1e-6, help="Maximum beta value"
-    )
-    prior_parser.add_argument(
-        "--beta-type", type=str, default="normal", help="Beta-prior",
-        choices=["normal", "uniform", "log-uniform"]
+        "--beta-type", type=str, default="uniform", help="Beta-prior",
+        choices=["uniform", "log-uniform"]
     )
     prior_parser.add_argument(
         "--c-max-multiplier",
@@ -85,7 +86,7 @@ def get_args():
         help="Multiplier of the max flux to use for setting the coefficient upper bound",
     )
     prior_parser.add_argument(
-        "--c-mix", type=float, default=0.5, help="Mixture between spike and slab"
+        "--c-mix", type=float, default=0.1, help="Mixture between spike and slab"
     )
     prior_parser.add_argument(
         "--toa-width", type=float, default=1,
@@ -112,14 +113,33 @@ def get_args():
     return args
 
 
-def run_analysis(args, data, model, priors):
-    likelihood = PulsarLikelihood(data, model)
+def add_sigma_prior(priors, data):
+    priors['sigma'] = bilby.core.prior.Uniform(
+        0, data.range_flux, 'sigma', latex_label=r"$\sigma$")
+    return priors
 
+
+def get_sampler_kwargs(args):
     run_sampler_kwargs = dict(
         sampler=args.sampler, nlive=args.nlive)
 
     if args.sampler_kwargs:
         run_sampler_kwargs.update(eval(args.sampler_kwargs))
+
+    return run_sampler_kwargs
+
+
+def run_full_analysis(args, data, full_model, result_null):
+
+    # Pre-plot the data and prior window
+    if args.plot_data:
+        plot.plot_data(data, filename=f"{args.outdir}/{args.label}_data")
+
+    likelihood = PulsarLikelihood(
+        data, full_model, noise_log_likelihood=result_null.log_evidence)
+
+    priors = full_model.get_priors(data)
+    priors = add_sigma_prior(priors, data)
 
     result = bilby.sampler.run_sampler(
         likelihood=likelihood,
@@ -129,20 +149,41 @@ def run_analysis(args, data, model, priors):
         outdir=args.outdir,
         check_point_plot=args.plot_run,
         clean=args.clean,
-        **run_sampler_kwargs
+        **get_sampler_kwargs(args)
     )
 
     s = result.posterior.iloc[result.posterior.log_likelihood.idxmax()]
-    residual = data.flux - model(data.time, **s)
+    residual = data.flux - full_model(data.time, **s)
+    result.meta_data["args"] = args.__dict__
+    result.meta_data["residual"] = residual
+    result.meta_data["RMS_residual"] = np.sqrt(np.mean(residual ** 2))
 
-    priors_null = bilby.core.prior.PriorDict()
-    priors_null["sigma"] = priors["sigma"]
-    for ii in range(args.base_flux_polynomial_max):
-        priors_null[f"B{ii}"] = priors[f"B{ii}"]
-    likelihood_null = NullLikelihood(data, model)
-    result_null = bilby.sampler.run_sampler(
+    if args.plot_corner:
+        parameters = ["toa", "beta", "sigma", "C0"]
+        result.plot_corner(parameters=parameters, priors=True)
+        if args.n_shapelets > 1:
+            plot.plot_coeffs(result, args)
+        plot.plot_result_null_corner(result, result_null, args)
+
+    if args.plot_fit:
+        plot.plot_fit(
+            data, result, full_model, priors, outdir=args.outdir,
+            label=args.label, width=args.plot_fit_width)
+
+    result.log_noise_evidence_err = result_null.log_evidence_err
+    result.save_to_file()
+
+    return result
+
+
+def run_null_analysis(args, data, null_model):
+    priors = null_model.get_priors(data)
+    priors = add_sigma_prior(priors, data)
+
+    likelihood_null = PulsarLikelihood(data, null_model)
+    result = bilby.sampler.run_sampler(
         likelihood=likelihood_null,
-        priors=priors_null,
+        priors=priors,
         label=args.label + "_null",
         outdir=args.outdir,
         save=False,
@@ -150,17 +191,10 @@ def run_analysis(args, data, model, priors):
         check_point_plot=False,
         clean=args.clean,
         verbose=False,
-        **run_sampler_kwargs
+        **get_sampler_kwargs(args)
     )
 
-    result.log_noise_evidence = result_null.log_evidence
-    result.log_noise_evidence_err = result_null.log_evidence_err
-    result.meta_data["args"] = args.__dict__
-    result.meta_data["residual"] = residual
-    result.meta_data["RMS_residual"] = np.sqrt(np.mean(residual ** 2))
-    result.save_to_file()
-
-    return result, result_null
+    return result
 
 
 def save(args, data, result, result_null, outdir):
@@ -183,7 +217,7 @@ def save(args, data, result, result_null, outdir):
         rows.append("C{}".format(i))
         rows.append("C{}_err".format(i))
 
-    for i in range(args.base_flux_polynomial_max):
+    for i in range(args.base_flux_n_polynomial):
         rows.append("B{}".format(i))
         rows.append("B{}_err".format(i))
 
@@ -213,7 +247,7 @@ def save(args, data, result, result_null, outdir):
         row_list.append(p["C{}".format(i)].mean())
         row_list.append(p["C{}".format(i)].std())
 
-    for i in range(args.base_flux_polynomial_max):
+    for i in range(args.base_flux_n_polynomial):
         row_list.append(p["B{}".format(i)].mean())
         row_list.append(p["B{}".format(i)].std())
 
@@ -221,64 +255,41 @@ def save(args, data, result, result_null, outdir):
         f.write(",".join([str(el) for el in row_list]) + "\n")
 
 
-def plot_coeffs(result, args):
-    coeffs = [f"C{ii}" for ii in range(1, args.n_shapelets)]
-    samples = result.posterior[coeffs].values
-    bins = np.linspace(np.min(samples[samples > 0]), np.max(samples))
-    fig, ax = plt.subplots()
-    for CC in coeffs:
-        ax.hist(result.posterior[CC], bins=bins, alpha=0.5, label=CC)
-    ax.set_xlabel("Coefficient amplitudes")
-    ax.legend()
-    fig.savefig(f"{args.outdir}/{args.label}_coefficients")
-
-
-def plot_base_flux(result, args):
-    parameters = [key for key in result.priors if "B" in key]
-    result.plot_corner(
-        parameters, filename=f"{args.outdir}/{args.label}_baseflux_corner")
-
-
 def main():
-
-    logger = logging.getLogger('single_pulse')
-    logger.setLevel(logging.INFO)
-
     args = get_args()
 
     if args.pretty:
-        set_rcparams()
+        plot.set_rcparams()
 
-    args.outdir = "outdir_single_pulse"
+    if args.label is None:
+        args.label = f"pulse_{args.pulse_number}"
+    else:
+        args.label = f"{args.label}_pulse_{args.pulse_number}"
+
     bilby.core.utils.check_directory_exists_and_if_not_mkdir(args.outdir)
-    args.label = "pulse_{}_shapelets_{}".format(args.pulse_number, args.n_shapelets)
 
-    model = SinglePulseFluxModel(
-        n_shapelets=args.n_shapelets,
-        n_base_flux=args.base_flux_polynomial_max)
+    full_model = flux.BaseFlux()
+    null_model = flux.BaseFlux()
 
-    logger.info(f"Reading data from {args.data_file}")
-    data = TimeDomainData.from_file(args.data_file, pulse_number=args.pulse_number)
+    if args.n_shapelets > 0:
+        args.label += f"_S{args.n_shapelets}"
+        full_model += flux.ShapeleteFlux(
+            n_shapelets=args.n_shapelets, toa_width=args.toa_width,
+            c_mix=args.c_mix, c_max_multiplier=args.c_max_multiplier,
+            beta_type=args.beta_type, beta_min=args.beta_min,
+            beta_max=args.beta_max)
 
-    priors = get_priors(args, data)
+    if args.base_flux_n_polynomial > 0:
+        args.label += f"_P{args.n_shapelets}"
+        null_model += flux.PolynomialFlux(args.base_flux_n_polynomial)
+        full_model += flux.PolynomialFlux(args.base_flux_n_polynomial)
 
-    # Pre-plot the data and prior window
-    if args.plot_fit:
-        logger.info("Pre-plot the data")
-        data.plot_fit(None, model, priors, outdir=args.outdir, label=args.label)
+    logger.info(f"Reading data for pulse {args.pulse_number} from {args.data_file}")
+    data = TimeDomainData.from_file(
+        args.data_file, pulse_number=args.pulse_number)
 
-    logger.info("Run the analysis")
-    result, result_null = run_analysis(args, data, model, priors)
+    result_null = run_null_analysis(args, data, null_model)
+    result_full = run_full_analysis(args, data, full_model, result_null)
+    save(args, data, result_full, result_null, args.outdir)
 
-    if args.plot_corner:
-        parameters = ["toa", "beta", "sigma", "C0"]
-        result.plot_corner(parameters=parameters, priors=True)
-        if args.n_shapelets > 1:
-            plot_coeffs(result, args)
-        plot_base_flux(result, args)
 
-    if args.plot_fit:
-        data.plot_fit(result, model, priors, outdir=args.outdir, label=args.label,
-                      width=args.plot_fit_width)
-
-    save(args, data, result, result_null, args.outdir)

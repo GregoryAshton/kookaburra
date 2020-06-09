@@ -36,9 +36,36 @@ class Data(unittest.TestCase):
         data = TimeDomainData.from_array(time=self.time, flux=self.flux)
         self.assertAlmostEqual(data.max_flux, np.exp(0), 3)
 
+    def test_min_flux(self):
+        data = TimeDomainData.from_array(time=self.time, flux=self.flux)
+        self.assertEqual(data.min_flux, np.min(data.flux))
+
+    def test_range_flux(self):
+        data = TimeDomainData.from_array(time=self.time, flux=self.flux)
+        self.assertEqual(data.range_flux, np.max(self.flux) - np.min(self.flux))
+
+    def test_midtime(self):
+        data = TimeDomainData.from_array(time=self.time, flux=self.flux)
+        self.assertEqual(data.midtime, 0)
+
+    def test_reference_time_default(self):
+        data = TimeDomainData.from_array(time=self.time, flux=self.flux)
+        self.assertEqual(data.reference_time, 0)
+
+    def test_reference_time_set(self):
+        data = TimeDomainData.from_array(time=self.time, flux=self.flux)
+        data.reference_time = 0.3
+        self.assertEqual(data.reference_time, 0.3)
+
     def test_max_time(self):
         data = TimeDomainData.from_array(time=self.time, flux=self.flux)
         self.assertAlmostEqual(data.max_time, 0, 3)
+
+    def test_delta_time(self):
+        data = TimeDomainData.from_array(time=self.time, flux=self.flux)
+        data.reference_time = 10
+        delta_time = data.time - 10
+        self.assertTrue(all(data.delta_time - delta_time == 0))
 
     def test_RMS_flux(self):
         data = TimeDomainData.from_array(time=self.time, flux=self.flux)
@@ -46,7 +73,7 @@ class Data(unittest.TestCase):
 
     def test_estimate_pulse_time(self):
         passes = 0
-        total = 100
+        total = 10
         time = np.linspace(-1, 1, 1000)
         for _ in range(total):
             pulse_time = np.random.uniform(-0.5, 0.5)
@@ -130,6 +157,20 @@ class Data(unittest.TestCase):
         os.remove(filename)
         idxs = df.pulse_number == 0
         self.assertTrue(np.all(np.abs(data.time - df[idxs].time.values) < 1e-15))
+
+    def test_time_unit_default(self):
+        data = TimeDomainData.from_array(time=self.time, flux=self.flux)
+        self.assertEqual(data.time_unit, "days")
+
+    def test_time_unit_set(self):
+        data = TimeDomainData.from_array(time=self.time, flux=self.flux)
+        data.time_unit = "s"
+        self.assertEqual(data.time_unit, "s")
+
+    def test_normal_pvalue(self):
+        data = TimeDomainData.from_array(
+            time=self.time, flux=np.random.normal(0, 1, len(self.time)))
+        self.assertGreater(data.normal_pvalue, 1e-2)
 
 
 if __name__ == "__main__":

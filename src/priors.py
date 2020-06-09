@@ -1,47 +1,4 @@
-import numpy as np
-from bilby.core.prior import Prior, Uniform, PriorDict, LogUniform, Normal, TruncatedNormal
-
-
-def get_priors(args, data):
-    priors = PriorDict()
-
-    if args.base_flux_polynomial_max == 0:
-        priors["base_flux"] = 0
-    else:
-        priors['B0'] = Uniform(
-            0, data.max_flux, 'B0', latex_label='$B_{0}$')
-        for ii in range(1, args.base_flux_polynomial_max):
-            priors[f'B{ii}'] = Normal(
-                0, data.max_flux / data.duration ** ii / np.math.factorial(ii),
-                f'B{ii}', latex_label=f'$B_{{{ii}}}$')
-
-    if args.toa_width < 1:
-        t0 = data.estimate_pulse_time()
-        dt = data.duration * args.toa_width
-        priors['toa'] = Uniform(t0 - dt, t0 + dt, "toa", latex_label="TOA")
-    else:
-        priors['toa'] = Uniform(data.start, data.end, "toa", latex_label="TOA")
-
-    if args.beta_type == "uniform":
-        priors['beta'] = Uniform(
-            args.beta_min, args.beta_max, 'beta', latex_label=r'$\beta$')
-    elif args.beta_type == "log-uniform":
-        priors['beta'] = LogUniform(
-            args.beta_min, args.beta_max, 'beta', latex_label=r'$\beta$')
-    elif args.beta_type == "normal":
-        priors['beta'] = TruncatedNormal(
-            minimum=args.beta_min, maximum=np.inf,
-            mu=args.beta_min, sigma=args.beta_max,
-            name='beta', latex_label=r'$\beta$')
-
-    for i in range(args.n_shapelets):
-        key = 'C{}'.format(i)
-        priors[key] = SpikeAndSlab(
-            slab=Uniform(1e-20 * data.max_flux, args.c_max_multiplier * data.range_flux),
-            name=key, mix=args.c_mix)
-
-    priors['sigma'] = Uniform(0, data.range_flux, 'sigma', latex_label="$\sigma$")
-    return priors
+from bilby.core.prior import Prior, Uniform
 
 
 class SpikeAndSlab(Prior):
