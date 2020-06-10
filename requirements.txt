@@ -1,0 +1,6 @@
+tables
+bilby
+pandas
+matplotlib
+numpy
+scipy
