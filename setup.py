@@ -85,7 +85,9 @@ setup(name='kookaburra',
       python_requires='>3.6',
       install_requires=['bilby'],
       entry_points={'console_scripts':
-                    ['single_pulse=kookaburra.single_pulse:main']
+                    ['kb_single_pulse=kookaburra.single_pulse:main',
+                     'kb_create_database=kookaburra.database:main'
+                     ]
                     },
       classifiers=[
           "Programming Language :: Python :: 3.7",

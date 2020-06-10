@@ -206,62 +206,6 @@ def run_null_analysis(args, data, null_model):
     return result
 
 
-def save(args, data, result, result_null, outdir):
-    rows = [
-        "pulse_number",
-        "toa",
-        "toa_std",
-        "beta",
-        "beta_std",
-        "sigma",
-        "sigma_std",
-        "log_evidence",
-        "log_evidence_err",
-        "log_noise_evidence",
-        "log_noise_evidence_err",
-        "toa_prior_width",
-    ]
-    for i in range(args.n_shapelets):
-        rows.append("C{}".format(i))
-        rows.append("C{}_err".format(i))
-
-    for i in range(args.base_flux_n_polynomial):
-        rows.append("B{}".format(i))
-        rows.append("B{}_err".format(i))
-
-    filename = f"{outdir}/{args.n_shapelets}_shapelets.summary"
-    if os.path.isfile(filename) is False:
-        with open(filename, "w+") as f:
-            f.write(",".join(rows) + "\n")
-
-    p = result.posterior
-    toa_prior_width = result.priors["toa"].maximum - result.priors["toa"].minimum
-    row_list = [
-        args.pulse_number,
-        p.toa.median(),
-        p.toa.std(),
-        p.beta.median(),
-        p.beta.std(),
-        p.sigma.median(),
-        p.sigma.std(),
-        result.log_evidence,
-        result.log_evidence_err,
-        result_null.log_evidence,
-        result_null.log_evidence_err,
-        toa_prior_width,
-    ]
-    for i in range(args.n_shapelets):
-        row_list.append(p["C{}".format(i)].mean())
-        row_list.append(p["C{}".format(i)].std())
-
-    for i in range(args.base_flux_n_polynomial):
-        row_list.append(p["B{}".format(i)].mean())
-        row_list.append(p["B{}".format(i)].std())
-
-    with open(filename, "a") as f:
-        f.write(",".join([str(el) for el in row_list]) + "\n")
-
-
 def main():
     args = get_args()
 
@@ -299,7 +243,4 @@ def main():
         data.truncate_data(args.truncate_data)
 
     result_null = run_null_analysis(args, data, null_model)
-    result_full = run_full_analysis(args, data, full_model, result_null)
-    save(args, data, result_full, result_null, args.outdir)
-
-
+    run_full_analysis(args, data, full_model, result_null)
