@@ -68,12 +68,46 @@ class BaseFlux(object):
 
 
 class ShapeleteFlux(BaseFlux):
-    """ Model-object for arbitrary shapelete basis
+    r""" An arbitrary shapelet basis
+
+    We use a simplified version of the shapelet formalism. Specifically, the
+    flux is modelled as
+
+    .. math::
+        f(t, n_s) = \sum_{i=0}^{n_s} C_{i} H_{i}\left(\frac{t-t_0}{\beta}\right) e^{\frac{(t-t_0)^2}{\beta^2}}
+
+    where :math:`C_{i}` are the coefficients, :math:`H_{i}` is the Hermite
+    polynomial of degree :math:`i`, and :math:`t_0` is the time of arrival.
 
     Parameters
     ----------
     n_shapelets: int,
         The number of shapelets
+    parameter_base_name: str
+        The basename for the coefficients, defaults to "C" such that
+        coefficients are "C0", "C1", etc.
+    toa_prior_time: str, float
+        If "auto" (default), the middle of the toa prior is chosen
+        automatically based on the maximum in the flux (with some robustness
+        checks). If a float [0, 1] it is taken as a fraction through the
+        duration at which to set the centre time, e.g. 0.5 specifies a prior
+        centered in the middle of the data segment. If toa_prior_width=1, this
+        parameter is ignored.
+    toa_prior_width: float
+        The fraction (of the duration) for the prior width. If equal to 1, the
+        entire data span is used as a prior. If less than one, a uniform prior
+        centered on toa_prior_time with with duration * toa_prior_width is used.
+    c_mix: float
+        The prior mixture fraction between the slab and spike for the
+        shapelet coefficients.
+    c_max_multiplier: float
+        A muliplier on the maximum coefficient amplitude to use for the slab
+        prior.
+    beta_min, beta_max: float, None
+        The minimum and maximum value for the beta prior. If None, default
+        default values are chosen based on the data duration and sample rate.
+    beta_type: str [uniform, log-uniform]
+        The type of prior to use for the beta parameter
 
     """
     pulse = True
@@ -148,12 +182,19 @@ class ShapeleteFlux(BaseFlux):
 
 
 class PolynomialFlux(BaseFlux):
-    """ Model-object for arbitrary-degree polynomial
+    """ An arbitrary-degree polynomial: used for modelling the baseline flux
+
+    The flux is given as the sum of polynomials up to :code:`n_polynomials`.
+    All coefficients are applied with a reference time in the middle of the
+    observation span.
 
     Parameters
     ----------
-    n_shapelets: int,
+    n_polynomials: int,
         The number of shapelets
+    parameter_base_name: str
+        The basename for the coefficients, defaults to "C" such that
+        coefficients are "C0", "C1", etc.
 
     """
     pulse = False

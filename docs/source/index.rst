@@ -8,6 +8,7 @@ Command line tools:
    :maxdepth: 2
 
    kb_single_pulse
+   kb_create_database
 
 
 

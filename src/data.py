@@ -138,27 +138,37 @@ class TimeDomainData:
     def from_csv(cls, filename, pulse_number=None):
         """ Read in the time and flux from a csv
 
+        The filename must point to a comma-separated file with at least two
+        columns, "time" and "flux". Optionally, an additional "pulse_number"
+        column can exist, if the pulse_number is specified, only data matching
+        the requested pulse number will be loaded.
+
         Parameters
         ----------
         filename: str
             The path to the file to read
         pulse_number: int:
-            The pulse number to truncate.
-
+            The pulse number to select from the file: if this is not given the
+            entire data file is used.
         """
         df = pd.read_csv(filename)
         return cls._sort_and_filter_dataframe(df, pulse_number)
 
     @classmethod
     def from_file(cls, filename, pulse_number=None):
-        """ Read in the time and flux from file
+        """ Read in the time and flux from a file
+
+        This is a generic interface for any file, for information about the
+        allowed filetypes and their specification, see the from_filetype
+        methods.
 
         Parameters
         ----------
         filename: str
             The path to the file to read
         pulse_number: int:
-            The pulse number to truncate.
+            The pulse number to select from the file: if this is not given the
+            entire data file is used.
 
         """
         if "h5" in filename:
@@ -169,6 +179,11 @@ class TimeDomainData:
     @classmethod
     def from_h5(cls, filename, pulse_number=None):
         """ Read in the time and flux from a pandas h5 file
+
+        The filename must point to a h5 data-frame file. The dataframe should
+        have at least two columns, "time" and "flux". Optionally, an additional
+        "pulse_number" column can exist, if the pulse_number is specified,
+        only data matching the requested pulse number will be loaded.
 
         Parameters
         ----------

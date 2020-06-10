@@ -15,7 +15,7 @@ logging.basicConfig(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Create a databse from single pulse analysis",
+        description="Create a database from single pulse analysis",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("directory", help="Directory containing json files")
