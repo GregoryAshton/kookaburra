@@ -78,14 +78,15 @@ class ShapeleteFlux(BaseFlux):
     """
     pulse = True
 
-    def __init__(self, n_shapelets, parameter_base_name="C", toa_width=1,
-                 c_mix=0.5, c_max_multiplier=1, beta_min=None, beta_max=None,
-                 beta_type="uniform"):
+    def __init__(self, n_shapelets, parameter_base_name="C", toa_prior_width=1,
+                 toa_prior_time=None, c_mix=0.5, c_max_multiplier=1,
+                 beta_min=None, beta_max=None, beta_type="uniform"):
         self.n_shapelets = n_shapelets
         self.parameter_base_name = parameter_base_name
 
         # Prior arguments
-        self.toa_width = toa_width
+        self.toa_prior_width = toa_prior_width
+        self.toa_prior_time = toa_prior_time
         self.c_mix = c_mix
         self.c_max_multiplier = c_max_multiplier
         self.beta_min = beta_min
@@ -111,9 +112,12 @@ class ShapeleteFlux(BaseFlux):
         priors = PriorDict()
 
         # Set up the TOA prior
-        if self.toa_width < 1:
-            t0 = data.estimate_pulse_time()
-            dt = data.duration * self.toa_width
+        if self.toa_prior_width < 1:
+            if self.toa_prior_time == "auto":
+                t0 = data.estimate_pulse_time()
+            else:
+                t0 = data.start + float(self.toa_prior_time) * data.duration
+            dt = data.duration * self.toa_prior_width
             priors["toa"] = Uniform(t0 - dt, t0 + dt, "toa", latex_label="TOA")
         else:
             priors["toa"] = Uniform(data.start, data.end, "toa", latex_label="TOA")

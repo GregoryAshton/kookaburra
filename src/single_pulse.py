@@ -5,6 +5,7 @@ import logging
 
 import bilby
 import numpy as np
+from scipy.stats import normaltest
 
 from . import flux
 from . import plot
@@ -28,6 +29,8 @@ def get_args():
                         default="outdir")
     parser.add_argument("--label", type=str, help="Extra label elements",
                         default=None)
+    parser.add_argument(
+        "--truncate-data", type=float, default=None)
 
     parser.add_argument(
         "-p",
@@ -89,10 +92,15 @@ def get_args():
         "--c-mix", type=float, default=0.1, help="Mixture between spike and slab"
     )
     prior_parser.add_argument(
-        "--toa-width", type=float, default=1,
+        "--toa-prior-width", type=float, default=1,
         help="Duration fraction for time prior. If 1, the whole data span used."
     )
-
+    prior_parser.add_argument(
+        "--toa-prior-time", type=str, default="auto",
+        help=("If a float [0, 1], the fraction of the duration to place the "
+              "centre of the time window. If auto (default) the time is taken "
+              "from the peak. If toa-prior-width=1, this argument is redudant")
+    )
     sampler_parser = parser.add_argument_group("Sampler options")
     sampler_parser.add_argument(
         "--sampler", type=str, default="pymultinest", help="Sampler to use"
@@ -131,15 +139,16 @@ def get_sampler_kwargs(args):
 
 def run_full_analysis(args, data, full_model, result_null):
 
-    # Pre-plot the data and prior window
+    priors = full_model.get_priors(data)
+    priors = add_sigma_prior(priors, data)
+
+    # Pre-plot the data
     if args.plot_data:
-        plot.plot_data(data, filename=f"{args.outdir}/{args.label}_data")
+        plot.plot_data(data, filename=f"{args.outdir}/{args.label}_data",
+                       time_prior=priors["toa"])
 
     likelihood = PulsarLikelihood(
         data, full_model, noise_log_likelihood=result_null.log_evidence)
-
-    priors = full_model.get_priors(data)
-    priors = add_sigma_prior(priors, data)
 
     result = bilby.sampler.run_sampler(
         likelihood=likelihood,
@@ -155,8 +164,8 @@ def run_full_analysis(args, data, full_model, result_null):
     s = result.posterior.iloc[result.posterior.log_likelihood.idxmax()]
     residual = data.flux - full_model(data.time, **s)
     result.meta_data["args"] = args.__dict__
-    result.meta_data["residual"] = residual
-    result.meta_data["RMS_residual"] = np.sqrt(np.mean(residual ** 2))
+    result.meta_data["maxl_residual"] = residual
+    result.meta_data["maxl_normaltest_pvalue"] = normaltest(residual).pvalue
 
     if args.plot_corner:
         parameters = ["toa", "beta", "sigma", "C0"]
@@ -211,7 +220,6 @@ def save(args, data, result, result_null, outdir):
         "log_noise_evidence",
         "log_noise_evidence_err",
         "toa_prior_width",
-        "normal_p_value",
     ]
     for i in range(args.n_shapelets):
         rows.append("C{}".format(i))
@@ -241,7 +249,6 @@ def save(args, data, result, result_null, outdir):
         result_null.log_evidence,
         result_null.log_evidence_err,
         toa_prior_width,
-        data.normal_pvalue,
     ]
     for i in range(args.n_shapelets):
         row_list.append(p["C{}".format(i)].mean())
@@ -274,19 +281,22 @@ def main():
     if args.n_shapelets > 0:
         args.label += f"_S{args.n_shapelets}"
         full_model += flux.ShapeleteFlux(
-            n_shapelets=args.n_shapelets, toa_width=args.toa_width,
-            c_mix=args.c_mix, c_max_multiplier=args.c_max_multiplier,
-            beta_type=args.beta_type, beta_min=args.beta_min,
-            beta_max=args.beta_max)
+            n_shapelets=args.n_shapelets, toa_prior_width=args.toa_prior_width,
+            toa_prior_time=args.toa_prior_time, c_mix=args.c_mix,
+            c_max_multiplier=args.c_max_multiplier, beta_type=args.beta_type,
+            beta_min=args.beta_min, beta_max=args.beta_max)
 
     if args.base_flux_n_polynomial > 0:
-        args.label += f"_P{args.n_shapelets}"
+        args.label += f"_BP{args.base_flux_n_polynomial}"
         null_model += flux.PolynomialFlux(args.base_flux_n_polynomial)
         full_model += flux.PolynomialFlux(args.base_flux_n_polynomial)
 
     logger.info(f"Reading data for pulse {args.pulse_number} from {args.data_file}")
     data = TimeDomainData.from_file(
         args.data_file, pulse_number=args.pulse_number)
+
+    if args.truncate_data is not None:
+        data.truncate_data(args.truncate_data)
 
     result_null = run_null_analysis(args, data, null_model)
     result_full = run_full_analysis(args, data, full_model, result_null)

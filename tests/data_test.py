@@ -167,11 +167,6 @@ class Data(unittest.TestCase):
         data.time_unit = "s"
         self.assertEqual(data.time_unit, "s")
 
-    def test_normal_pvalue(self):
-        data = TimeDomainData.from_array(
-            time=self.time, flux=np.random.normal(0, 1, len(self.time)))
-        self.assertGreater(data.normal_pvalue, 1e-2)
-
 
 if __name__ == "__main__":
     unittest.main()

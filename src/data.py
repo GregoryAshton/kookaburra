@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from scipy.stats import normaltest
 
 
 class TimeDomainData:
@@ -86,6 +85,11 @@ class TimeDomainData:
     @time_unit.setter
     def time_unit(self, time_unit):
         self._time_unit = time_unit
+
+    def truncate_data(self, width):
+        idxs = np.abs(self.delta_time) < width * self.duration
+        self.time = self.time[idxs]
+        self.flux = self.flux[idxs]
 
     def estimate_pulse_time(self, f=0.75):
         """ Naive estimate of the pulse time
@@ -187,7 +191,3 @@ class TimeDomainData:
         time_domain_data.flux = df.flux.values
         del df
         return time_domain_data
-
-    @property
-    def normal_pvalue(self):
-        return normaltest(self.flux).pvalue

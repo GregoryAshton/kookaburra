@@ -28,8 +28,8 @@ class Flux(unittest.TestCase):
         self.assertIsInstance(out, np.ndarray)
         self.assertEqual(out.shape, self.time.shape)
 
-    def test_shapelets_toa_width_prior(self):
-        flux_instance = flux.ShapeleteFlux(5, toa_width=0.1)
+    def test_shapelets_toa_prior_width(self):
+        flux_instance = flux.ShapeleteFlux(5, toa_prior_width=0.1, toa_prior_time=0.1)
         priors = flux_instance.get_priors(self.data)
         self.assertIsInstance(priors, bilby.core.prior.PriorDict)
         self.assertLess(priors["toa"].maximum - priors["toa"].minimum, self.data.duration)
