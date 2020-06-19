@@ -87,7 +87,9 @@ class TimeDomainData:
         self._time_unit = time_unit
 
     def truncate_data(self, width):
-        idxs = np.abs(self.delta_time) < width * self.duration
+        """ Symmetric data time by fraction width """
+        times_from_mid = self.time - self.midtime
+        idxs = np.abs(times_from_mid) < 0.5 * width * self.duration
         self.time = self.time[idxs]
         self.flux = self.flux[idxs]
 

@@ -167,6 +167,12 @@ class Data(unittest.TestCase):
         data.time_unit = "s"
         self.assertEqual(data.time_unit, "s")
 
+    def test_truncate_data(self):
+        data = TimeDomainData.from_array(time=self.time, flux=self.flux)
+        duration = data.duration
+        data.truncate_data(0.5)
+        self.assertLess(data.duration, 0.5 * duration)
+
 
 if __name__ == "__main__":
     unittest.main()
