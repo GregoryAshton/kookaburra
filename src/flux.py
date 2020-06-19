@@ -67,7 +67,7 @@ class BaseFlux(object):
         return np.zeros_like(time)
 
 
-class ShapeleteFlux(BaseFlux):
+class ShapeletFlux(BaseFlux):
     r""" An arbitrary shapelet basis
 
     We use a simplified version of the shapelet formalism. Specifically, the

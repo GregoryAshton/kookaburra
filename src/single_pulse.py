@@ -224,7 +224,7 @@ def main():
 
     if args.n_shapelets > 0:
         args.label += f"_S{args.n_shapelets}"
-        full_model += flux.ShapeleteFlux(
+        full_model += flux.ShapeletFlux(
             n_shapelets=args.n_shapelets, toa_prior_width=args.toa_prior_width,
             toa_prior_time=args.toa_prior_time, c_mix=args.c_mix,
             c_max_multiplier=args.c_max_multiplier, beta_type=args.beta_type,
