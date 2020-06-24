@@ -13,7 +13,7 @@ def set_rcparams():
 
 
 def plot_data(data, ax=None, reference_time=None, label=None, filename=None,
-              time_prior=None):
+              time_priors=None):
     """ Plot the data
 
     Parameters
@@ -38,10 +38,11 @@ def plot_data(data, ax=None, reference_time=None, label=None, filename=None,
     else:
         ax.set_xlabel(f"Time [{data.time_unit}]")
 
-    if time_prior is not None:
-        ax.axvspan(time_prior.minimum - data.reference_time,
-                   time_prior.maximum - data.reference_time,
-                   alpha=0.1, color='k')
+    if time_priors is not None:
+        for time_prior in time_priors:
+            ax.axvspan(time_prior.minimum - data.reference_time,
+                       time_prior.maximum - data.reference_time,
+                       alpha=0.1, color='k')
 
     if filename is not None:
         plt.tight_layout()
@@ -75,7 +76,7 @@ def plot_fit(data, result, model, priors, outdir, label, width="auto"):
     maxl_sample = result.posterior.iloc[result.posterior.log_likelihood.idxmax()]
 
     # Set the reference time to the max-l TOA
-    data.reference_time = maxl_sample["toa"]
+    #data.reference_time = maxl_sample["toa"]
     times = data.delta_time
 
     # Calculate the max likelihood flux
@@ -87,10 +88,12 @@ def plot_fit(data, result, model, priors, outdir, label, width="auto"):
 
     # Plot the time prior window
     for ax in [ax1, ax2]:
-        ax.axvspan(
-            priors["toa"].minimum - data.reference_time,
-            priors["toa"].maximum - data.reference_time,
-            color='k', alpha=0.05)
+        for key, prior in priors.items():
+            if "toa" in key:
+                ax.axvspan(
+                    prior.minimum - data.reference_time,
+                    prior.maximum - data.reference_time,
+                    color='k', alpha=0.05)
 
     # Plot the data
     ax1.plot(times, data.flux, label="data", lw=1, color="C0", zorder=-100)
@@ -148,16 +151,18 @@ def plot_fit(data, result, model, priors, outdir, label, width="auto"):
     fig.savefig(filename, dpi=600)
 
 
-def plot_coeffs(result, args):
-    coeffs = [f"C{ii}" for ii in range(1, args.n_shapelets)]
-    samples = result.posterior[coeffs].values
+def plot_coeffs(result, args, model):
+    if len(getattr(model, "coef_keys", [])) == 0:
+        return
+
+    samples = result.posterior[model.coef_keys].values
     bins = np.linspace(np.min(samples[samples > 0]), np.max(samples))
     fig, ax = plt.subplots()
-    for CC in coeffs:
+    for CC in model.coef_keys:
         ax.hist(result.posterior[CC], bins=bins, alpha=0.5, label=CC)
     ax.set_xlabel("Coefficient amplitudes")
     ax.legend()
-    fig.savefig(f"{args.outdir}/{args.label}_coefficients")
+    fig.savefig(f"{args.outdir}/{args.label}_{model.name}_coefficients")
 
 
 def plot_result_null_corner(result, result_null, args):

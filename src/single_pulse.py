@@ -1,14 +1,13 @@
 """ Command line tool for single-pulse shapelet analysis """
 import argparse
-import os
 import logging
 
 import bilby
-import numpy as np
 from scipy.stats import normaltest
 
 from . import flux
 from . import plot
+from .priors import update_toa_prior
 from .data import TimeDomainData
 from .likelihood import PulsarLikelihood
 
@@ -44,12 +43,14 @@ def get_args():
     parser.add_argument(
         "-s",
         "--n-shapelets",
-        type=int,
+        nargs="+",
         required=True,
-        help="Required: the number of shapelets to fit.",
+        help=("Required: the number of shapelets to fit. Multiple component "
+              "models are specified by a list, e.g. `-s 2 3 1`")
     )
     parser.add_argument(
         "-b", "--base-flux-n-polynomial", default=1, type=int,
+        help="The order for the base polynomial"
     )
 
     plot_parser = parser.add_argument_group("Output options")
@@ -69,7 +70,8 @@ def get_args():
     plot_parser.add_argument(
         "--plot-run", action="store_true",
         help="Create run plots if available")
-    plot_parser.add_argument("--pretty", action="store_true", help="")
+    plot_parser.add_argument("--pretty", action="store_true", help="Use latex for plotting")
+    plot_parser.add_argument("--max-corner", default=6, help="Maximum number of components in corner plots")
 
     prior_parser = parser.add_argument_group("Prior options")
     prior_parser.add_argument(
@@ -141,11 +143,12 @@ def run_full_analysis(args, data, full_model, result_null):
 
     priors = full_model.get_priors(data)
     priors = add_sigma_prior(priors, data)
+    priors = update_toa_prior(priors)
 
     # Pre-plot the data
     if args.plot_data:
         plot.plot_data(data, filename=f"{args.outdir}/{args.label}_data",
-                       time_prior=priors["toa"])
+                       time_priors=[p for k, p in priors.items() if "toa" in k])
 
     likelihood = PulsarLikelihood(
         data, full_model, noise_log_likelihood=result_null.log_evidence)
@@ -168,10 +171,17 @@ def run_full_analysis(args, data, full_model, result_null):
     result.meta_data["maxl_normaltest_pvalue"] = normaltest(residual).pvalue
 
     if args.plot_corner:
-        parameters = ["toa", "beta", "sigma", "C0"]
-        result.plot_corner(parameters=parameters, priors=True)
-        if args.n_shapelets > 1:
-            plot.plot_coeffs(result, args)
+        for model in full_model.models:
+            parameters = model.parameters
+            if len(parameters) == 0:
+                continue
+            if len(parameters) <= args.max_corner:
+                filename = f"{args.outdir}/{args.label}_{model.name}_corner"
+                result.plot_corner(
+                    parameters=parameters, priors=True, filename=filename
+                )
+
+            plot.plot_coeffs(result, args, model)
         plot.plot_result_null_corner(result, result_null, args)
 
     if args.plot_fit:
@@ -222,18 +232,22 @@ def main():
     full_model = flux.BaseFlux()
     null_model = flux.BaseFlux()
 
-    if args.n_shapelets > 0:
-        args.label += f"_S{args.n_shapelets}"
-        full_model += flux.ShapeletFlux(
-            n_shapelets=args.n_shapelets, toa_prior_width=args.toa_prior_width,
-            toa_prior_time=args.toa_prior_time, c_mix=args.c_mix,
-            c_max_multiplier=args.c_max_multiplier, beta_type=args.beta_type,
-            beta_min=args.beta_min, beta_max=args.beta_max)
+    for ii, ns in enumerate(args.n_shapelets):
+        ns = int(ns)
+        if ns > 0:
+            name = f"S{ii}"
+            args.label += f"_{name}-{ns}"
+            full_model += flux.ShapeletFlux(
+                n_shapelets=ns, toa_prior_width=args.toa_prior_width,
+                toa_prior_time=args.toa_prior_time, c_mix=args.c_mix,
+                c_max_multiplier=args.c_max_multiplier, beta_type=args.beta_type,
+                beta_min=args.beta_min, beta_max=args.beta_max,
+                name=name)
 
     if args.base_flux_n_polynomial > 0:
         args.label += f"_BP{args.base_flux_n_polynomial}"
-        null_model += flux.PolynomialFlux(args.base_flux_n_polynomial)
-        full_model += flux.PolynomialFlux(args.base_flux_n_polynomial)
+        null_model += flux.PolynomialFlux(args.base_flux_n_polynomial, name="BP")
+        full_model += flux.PolynomialFlux(args.base_flux_n_polynomial, name="BP")
 
     logger.info(f"Reading data for pulse {args.pulse_number} from {args.data_file}")
     data = TimeDomainData.from_file(

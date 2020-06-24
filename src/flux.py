@@ -66,6 +66,14 @@ class BaseFlux(object):
     def __call__(self, time, **kwargs):
         return np.zeros_like(time)
 
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = name
+
 
 class ShapeletFlux(BaseFlux):
     r""" An arbitrary shapelet basis
@@ -83,7 +91,7 @@ class ShapeletFlux(BaseFlux):
     ----------
     n_shapelets: int,
         The number of shapelets
-    parameter_base_name: str
+    basename: str
         The basename for the coefficients, defaults to "C" such that
         coefficients are "C0", "C1", etc.
     toa_prior_time: str, float
@@ -112,34 +120,41 @@ class ShapeletFlux(BaseFlux):
     """
     pulse = True
 
-    def __init__(self, n_shapelets, parameter_base_name="C", toa_prior_width=1,
+    def __init__(self, n_shapelets, name="ShapeletFlux", basename="C", toa_prior_width=1,
                  toa_prior_time=None, c_mix=0.5, c_max_multiplier=1,
                  beta_min=None, beta_max=None, beta_type="uniform"):
         self.n_shapelets = n_shapelets
-        self.parameter_base_name = parameter_base_name
+        self.name = name
+        self.basename = basename
 
         # Prior arguments
         self.toa_prior_width = toa_prior_width
         self.toa_prior_time = toa_prior_time
         self.c_mix = c_mix
         self.c_max_multiplier = c_max_multiplier
+
+        self.toa_key = f"toa_{self.name}"
+        self.toa_latex_label = f"{self.name}-TOA"
+
+        self.beta_key = f"beta_{self.name}"
+        self.beta_latex_label = f"{self.name}-$\\beta$"
         self.beta_min = beta_min
         self.beta_max = beta_max
         self.beta_type = beta_type
 
         # Set up the keys and parameters
-        self.keys = [
-            f"{self.parameter_base_name}{ii}" for ii in range(self.n_shapelets)
+        self.coef_keys = [
+            f"{self.basename}{ii}_{self.name}" for ii in range(self.n_shapelets)
         ]
-        self.parameters = dict(beta=None, toa=None)
+        self.parameters = {self.beta_key: None, self.toa_key: None}
         for i in range(self.n_shapelets):
-            self.parameters[self.keys[i]] = None
+            self.parameters[self.coef_keys[i]] = None
 
     def __call__(self, time, **kwargs):
         """ Return the flux as a function of time """
-        x = (time - kwargs["toa"]) / kwargs["beta"]
+        x = (time - kwargs[self.toa_key]) / kwargs[self.beta_key]
         pre = np.exp(-(x ** 2))
-        coefs = [kwargs[key] for key in self.keys]
+        coefs = [kwargs[key] for key in self.coef_keys]
         return pre * np.polynomial.hermite.Hermite(coefs)(x)
 
     def get_priors(self, data):
@@ -152,9 +167,11 @@ class ShapeletFlux(BaseFlux):
             else:
                 t0 = data.start + float(self.toa_prior_time) * data.duration
             dt = data.duration * self.toa_prior_width
-            priors["toa"] = Uniform(t0 - dt, t0 + dt, "toa", latex_label="TOA")
+            priors[self.toa_key] = Uniform(
+                t0 - dt, t0 + dt, self.toa_key, latex_label=self.toa_latex_label)
         else:
-            priors["toa"] = Uniform(data.start, data.end, "toa", latex_label="TOA")
+            priors[self.toa_key] = Uniform(
+                data.start, data.end, self.toa_key, latex_label=self.toa_latex_label)
 
         # Set up the beta prior
         if self.beta_min is None:
@@ -163,16 +180,18 @@ class ShapeletFlux(BaseFlux):
             self.beta_max = data.duration
 
         if self.beta_type == "uniform":
-            priors["beta"] = Uniform(self.beta_min, self.beta_max, "beta", latex_label=r"$\beta$")
+            priors[self.beta_key] = Uniform(
+                self.beta_min, self.beta_max, self.beta_key, latex_label=self.beta_latex_label
+            )
         elif self.beta_type == "log-uniform":
-            priors["beta"] = LogUniform(
-                self.beta_min, self.beta_max, "beta", latex_label=r"$\beta$"
+            priors[self.beta_key] = LogUniform(
+                self.beta_min, self.beta_max, self.beta_key, latex_label=self.beta_latex_label
             )
         else:
             raise ValueError()
 
         # Set up the coefficient prior
-        for key in self.keys:
+        for key in self.coef_keys:
             priors[key] = SpikeAndSlab(
                 slab=Uniform(1e-20 * data.max_flux, self.c_max_multiplier * data.range_flux),
                 name=key,
@@ -192,39 +211,40 @@ class PolynomialFlux(BaseFlux):
     ----------
     n_polynomials: int,
         The number of shapelets
-    parameter_base_name: str
+    basename: str
         The basename for the coefficients, defaults to "C" such that
         coefficients are "C0", "C1", etc.
 
     """
     pulse = False
 
-    def __init__(self, n_polynomials, parameter_base_name="B"):
+    def __init__(self, n_polynomials, name="PolynomialFlux", basename="B"):
         self.n_polynomials = n_polynomials
-        self.parameter_base_name = parameter_base_name
+        self.name = name
+        self.basename = basename
         self._set_up_parameters()
 
     def _set_up_parameters(self):
         """ Initiates the parameters """
-        self.keys = [
-            f"{self.parameter_base_name}{ii}" for ii in range(self.n_polynomials)
+        self.poly_keys = [
+            f"{self.basename}{ii}" for ii in range(self.n_polynomials)
         ]
 
-        self.parameters = {key: None for key in self.keys}
+        self.parameters = {key: None for key in self.poly_keys}
 
     def __call__(self, time, **kwargs):
-        coeffs = [kwargs[key] for key in self.keys]
+        coeffs = [kwargs[key] for key in self.poly_keys]
         midtime = 0.5 * (time[0] + time[-1])
         return np.poly1d(coeffs[::-1])(time - midtime)
 
     def get_priors(self, data):
         priors = PriorDict()
 
-        name = f'{self.parameter_base_name}0'
+        name = f'{self.basename}0'
         priors[name] = Uniform(
             0, data.max_flux, name, latex_label='$B_{0}$')
         for ii in range(1, self.n_polynomials):
-            name = f'{self.parameter_base_name}{ii}'
+            name = f'{self.basename}{ii}'
             priors[name] = Normal(
                 0,
                 data.range_flux / data.duration ** ii / np.math.factorial(ii),
