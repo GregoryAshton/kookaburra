@@ -1,5 +1,5 @@
 ---
-title: 'Kookaburra: A Python package for radio-pulsar shapelet analysis'
+title: 'Kookaburra for radio-pulsar shapelet analysis'
 tags:
   - Python
   - astronomy
@@ -19,16 +19,17 @@ bibliography: paper.bib
 
 # Summary
 
-Radio pulsars are rapidly spinning magnetized neutron stars which produce a
-lighthouse-like beams of raditation. This radiation is observed by radio
-telescopes as periodic pulsations. Kookaburra provides a method to fit flux
-models to individual pulsations. Fitting is performed by stochastic sampling
-methods building on the bilby [@bilby:2019] Bayesian inference library.
+Radio pulsars are rapidly-spinning highly-magnetized neutron stars which
+produce a lighthouse-like beam of raditation. This radiation is observed by
+radio telescopes as periodic pulsations. Kookaburra provides a method to fit
+flux models to individual pulsations. Fitting is performed by stochastic
+sampling methods building on the bilby [@bilby:2019] Bayesian inference
+library.
 
 # Shapelet model
 
 The primary flux model provided by kookaburra is a simplified version of the
-shapelets [@refregier:2003]. We define shapelets as
+shapelet model proposed in @refregier:2003. We define shapelets as
 
 $$ f(x) = \sum_{i=0}^{n_{s}} C_{i} H_{i}(x/\beta) e^{-x^2 / \beta^2} \,, $$
 
