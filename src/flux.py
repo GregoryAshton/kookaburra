@@ -120,7 +120,7 @@ class ShapeletFlux(BaseFlux):
     """
     pulse = True
 
-    def __init__(self, n_shapelets, name="ShapeletFlux", basename="C", toa_prior_width=1,
+    def __init__(self, n_shapelets, name=None, basename="C", toa_prior_width=1,
                  toa_prior_time=None, c_mix=0.5, c_max_multiplier=1,
                  beta_min=None, beta_max=None, beta_type="uniform"):
         self.n_shapelets = n_shapelets
@@ -133,19 +133,33 @@ class ShapeletFlux(BaseFlux):
         self.c_mix = c_mix
         self.c_max_multiplier = c_max_multiplier
 
-        self.toa_key = f"toa_{self.name}"
-        self.toa_latex_label = f"{self.name}-TOA"
+        if self.name is not None:
+            self.toa_key = f"toa_{self.name}"
+            self.toa_latex_label = f"{self.name}-TOA"
+        else:
+            self.toa_key = "toa"
+            self.toa_latex_label = "TOA"
 
-        self.beta_key = f"beta_{self.name}"
-        self.beta_latex_label = f"{self.name}-$\\beta$"
+        if self.name is not None:
+            self.beta_key = f"beta_{self.name}"
+            self.beta_latex_label = f"{self.name}-$\\beta$"
+        else:
+            self.beta_key = "beta"
+            self.beta_latex_label = "$\\beta$"
+
         self.beta_min = beta_min
         self.beta_max = beta_max
         self.beta_type = beta_type
 
         # Set up the keys and parameters
-        self.coef_keys = [
-            f"{self.basename}{ii}_{self.name}" for ii in range(self.n_shapelets)
-        ]
+        if self.name is not None:
+            self.coef_keys = [
+                f"{self.basename}{ii}_{self.name}" for ii in range(self.n_shapelets)
+            ]
+        else:
+            self.coef_keys = [
+                f"{self.basename}{ii}" for ii in range(self.n_shapelets)
+            ]
         self.parameters = {self.beta_key: None, self.toa_key: None}
         for i in range(self.n_shapelets):
             self.parameters[self.coef_keys[i]] = None

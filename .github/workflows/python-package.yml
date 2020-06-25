@@ -38,3 +38,8 @@ jobs:
       run: |
         pip install .
         pytest
+    - name: Example test
+      run: |
+        pip install .
+        cd example
+        bash RUNME.sh
