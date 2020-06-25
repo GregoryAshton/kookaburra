@@ -41,5 +41,5 @@ jobs:
     - name: Example test
       run: |
         pip install .
-        cd example
+        cd examples/
         bash RUNME.sh
