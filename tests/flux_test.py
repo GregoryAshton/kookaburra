@@ -18,10 +18,21 @@ class Flux(unittest.TestCase):
         del self.flux
 
     def test_shapelets(self):
-        flux_instance = flux.ShapeletFlux(3)
+        flux_instance = flux.ShapeletFlux(3, name="ShapeletFlux")
         self.assertIsInstance(flux_instance.parameters, dict)
         self.assertEqual(list(flux_instance.parameters.keys()),
                          ["beta_ShapeletFlux", "toa_ShapeletFlux", "C0_ShapeletFlux", "C1_ShapeletFlux", "C2_ShapeletFlux"])
+        priors = flux_instance.get_priors(self.data)
+        self.assertIsInstance(priors, bilby.core.prior.PriorDict)
+        out = flux_instance(self.data.time, **priors.sample())
+        self.assertIsInstance(out, np.ndarray)
+        self.assertEqual(out.shape, self.time.shape)
+
+    def test_shapelets_noname(self):
+        flux_instance = flux.ShapeletFlux(3)
+        self.assertIsInstance(flux_instance.parameters, dict)
+        self.assertEqual(list(flux_instance.parameters.keys()),
+                         ["beta", "toa", "C0", "C1", "C2"])
         priors = flux_instance.get_priors(self.data)
         self.assertIsInstance(priors, bilby.core.prior.PriorDict)
         out = flux_instance(self.data.time, **priors.sample())
