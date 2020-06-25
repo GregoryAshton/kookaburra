@@ -121,14 +121,23 @@ extra components. Above six, modest improvements are made as more subtle
 features get fit. Eventually, the Bayes factor will turn over and start to
 decrease as additional components fail to improve the fit, but incur extra
 losses from the increased prior space (also known as the Occam penalty
-[@mackay:2003]). In \autoref{fig:fit}, we show the output of kookaburra, for
-the 19-component model fit to the simulated data. From this fit, it is clear
-that we have not found a perfect fit for the data. In particular, the residual
-demonstrates structure indicating the existence of an improved model fit.
+[@mackay:2003]). 
 
 ![Bayes factor for the pulse vs null applied to simulated data similar to the Vela pulsar.\label{fig:bayes_factor}](bayes_factor.png)
 
-![Top panel: the simulated data (blue), maximum likelihood fit (green), and 90\% confidence interval (C.I.) of the fit (orange) for the 19-component shapelet model fit. Bottom panel: the residual after removing the maximum likelihood (blue) and 90\% C.I uncertainty (orange). A grey region indicates the user-settable prior region for the pulse time of arrival. \label{fig:fit}](fit_with_data.png)
+In \autoref{fig:fit}, we show the output of kookaburra, for the 20-component
+model fit to the simulated data. From this fit, it is clear that we have not
+found a perfect fit for the data. In particular, the residual demonstrates
+structure indicating the existence of an improved model fit. It is possible
+that increasing the number of components will eventually resolve this
+under-fitting. However, we find in this case that a model with 3 shapelets,
+each having 5 components improves the fit; see \autoref{fig:fit-fixed}. Here,
+we simply demonstrate that a fit can be achieved, studying the optimal choice
+of model is a future research project.
+
+![Top panel: the simulated data (blue), maximum likelihood fit (green), and 90\% confidence interval (C.I.) of the fit (orange) for the 20-component shapelet model fit. Bottom panel: the residual after removing the maximum likelihood (blue) and 90\% C.I uncertainty (orange). A grey region indicates the user-settable prior region for the pulse time of arrival. \label{fig:fit}](fit_with_data.png)
+
+![Top panel: the simulated data (blue), maximum likelihood fit (green), and 90\% confidence interval (C.I.) of the fit (orange) for the 3-shapelet model, each with 5 components. Bottom panel: the residual after removing the maximum likelihood (blue) and 90\% C.I uncertainty (orange). A grey region indicates the user-settable prior region for the pulse time of arrival. \label{fig:fit-fixed}](fit_with_data_555.png)
 
 # Validation
 
