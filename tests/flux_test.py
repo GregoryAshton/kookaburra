@@ -21,7 +21,7 @@ class Flux(unittest.TestCase):
         flux_instance = flux.ShapeletFlux(3)
         self.assertIsInstance(flux_instance.parameters, dict)
         self.assertEqual(list(flux_instance.parameters.keys()),
-                         ["beta", "toa", "C0", "C1", "C2"])
+                         ["beta_ShapeletFlux", "toa_ShapeletFlux", "C0_ShapeletFlux", "C1_ShapeletFlux", "C2_ShapeletFlux"])
         priors = flux_instance.get_priors(self.data)
         self.assertIsInstance(priors, bilby.core.prior.PriorDict)
         out = flux_instance(self.data.time, **priors.sample())
@@ -32,21 +32,21 @@ class Flux(unittest.TestCase):
         flux_instance = flux.ShapeletFlux(5, toa_prior_width=0.1, toa_prior_time=0.1)
         priors = flux_instance.get_priors(self.data)
         self.assertIsInstance(priors, bilby.core.prior.PriorDict)
-        self.assertLess(priors["toa"].maximum - priors["toa"].minimum, self.data.duration)
+        self.assertLess(priors[flux_instance.toa_key].maximum - priors[flux_instance.toa_key].minimum, self.data.duration)
 
     def test_shapelets_beta_uniform_prior(self):
         flux_instance = flux.ShapeletFlux(5, beta_type="uniform", beta_min=0, beta_max=0.1)
         priors = flux_instance.get_priors(self.data)
-        self.assertIsInstance(priors["beta"], bilby.core.prior.Uniform)
-        self.assertEqual(priors["beta"].minimum, 0)
-        self.assertEqual(priors["beta"].maximum, 0.1)
+        self.assertIsInstance(priors[flux_instance.beta_key], bilby.core.prior.Uniform)
+        self.assertEqual(priors[flux_instance.beta_key].minimum, 0)
+        self.assertEqual(priors[flux_instance.beta_key].maximum, 0.1)
 
     def test_shapelets_beta_log_uniform_prior(self):
         flux_instance = flux.ShapeletFlux(5, beta_type="log-uniform", beta_min=0.01, beta_max=0.1)
         priors = flux_instance.get_priors(self.data)
-        self.assertIsInstance(priors["beta"], bilby.core.prior.LogUniform)
-        self.assertEqual(priors["beta"].minimum, 0.01)
-        self.assertEqual(priors["beta"].maximum, 0.1)
+        self.assertIsInstance(priors[flux_instance.beta_key], bilby.core.prior.LogUniform)
+        self.assertEqual(priors[flux_instance.beta_key].minimum, 0.01)
+        self.assertEqual(priors[flux_instance.beta_key].maximum, 0.1)
 
     def test_polynomial(self):
         flux_instance = flux.PolynomialFlux(3)
