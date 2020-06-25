@@ -16,7 +16,7 @@ the simple construction of priors for arbitrarily complicated models.
 Shapelets
 ~~~~~~~~~
 
-.. autoclass:: kookaburra.flux.ShapeleteFlux
+.. autoclass:: kookaburra.flux.ShapeletFlux
 
 Polynomials
 ~~~~~~~~~~~
@@ -33,7 +33,7 @@ prior on the time of arrival. Here is an example for the shapelet model:
 .. code-block:: python
 
    >>> import kookaburra as kb
-   >>> shapelets = kb.flux.ShapeleteFlux(2)
+   >>> shapelets = kb.flux.ShapeletFlux(2)
    >>> # Create some random data
    >>> data = kb.data.TimeDomainData.from_array(
            time=np.linspace(0, 1, 100), flux=np.random.normal(0, 1, 100))
@@ -49,7 +49,7 @@ Once initiated, flux models can be combined. For example:
 .. code-block:: python
 
    >>> import kookaburra as kb
-   >>> shapelets = kb.flux.ShapeleteFlux(2)
+   >>> shapelets = kb.flux.ShapeletFlux(2)
    >>> poly = kb.flux.PolynomialFlux(2)
    >>> comibined  = shapelets + poly
    >>> print(combined.parameters)

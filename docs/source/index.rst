@@ -1,26 +1,9 @@
 Welcome to kookaburra's documentation!
 ======================================
 
-Command line tools:
--------------------
-
-.. toctree::
-   :maxdepth: 2
-
-   kb_single_pulse
-   kb_create_database
-
-
-
-Python API
-----------
-
-.. toctree::
-   :maxdepth: 2
-
-   data
-   flux-models
-
+This is the documentation for the :code:`kookaburra` package used for analysis
+of radio-pulsar flux. The source code can be found `here
+<https://github.com/GregoryAshton/kookaburra>`_.
 
 Installation
 ------------
@@ -39,8 +22,6 @@ Installation
 
    .. tab:: pip
 
-      WARNING: kookaburra is not yet deployed to pip, please install from source
-
       .. code-block:: console
 
           $ pip install kookaburra
@@ -49,10 +30,22 @@ Installation
 
 
 
-Indices and tables
-------------------
+Command line tools:
+-------------------
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. toctree::
+   :maxdepth: 2
 
+   kb_single_pulse
+   kb_create_database
+
+
+
+Python API:
+-----------
+
+.. toctree::
+   :maxdepth: 2
+
+   data
+   flux-models

@@ -22,7 +22,7 @@ pulse_injection_parameters = dict(
 
 
 # Instantiate a flux model: a sum of the shaplet and polynomial flux classes
-flux_model = kb.flux.ShapeleteFlux(3) + kb.flux.PolynomialFlux(2)
+flux_model = kb.flux.ShapeletFlux(3) + kb.flux.PolynomialFlux(2)
 
 # Generate fake data using the instantiated flux model and injection parameters
 N = 1000
