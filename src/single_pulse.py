@@ -24,6 +24,9 @@ def get_args():
 
     parser.add_argument("data_file", type=str, help="The data file")
 
+    parser.add_argument("--time-unit", type=str, default='days',
+                        help="Time units for data_file")
+
     parser.add_argument("--outdir", type=str, help="The output directory",
                         default="outdir")
     parser.add_argument("--label", type=str, help="Extra label elements",
@@ -252,6 +255,7 @@ def main():
     logger.info(f"Reading data for pulse {args.pulse_number} from {args.data_file}")
     data = TimeDomainData.from_file(
         args.data_file, pulse_number=args.pulse_number)
+    data.time_unit = args.time_unit
 
     if args.truncate_data is not None:
         data.truncate_data(args.truncate_data)
