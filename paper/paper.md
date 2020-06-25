@@ -20,7 +20,7 @@ bibliography: paper.bib
 # Summary
 
 Radio pulsars are rapidly-spinning highly-magnetized neutron stars which
-produce a lighthouse-like beam of radiation [@hewish:1986; @pacini:1967;
+produce a lighthouse-like beam of radiation [@hewish:1968; @pacini:1967;
 @gold:1968]. This radiation is observed by radio telescopes as periodic
 pulsations. Kookaburra provides a method to fit flux models to individual
 pulsations, building on the notion of profile-domain timing (see, e,g
@@ -132,8 +132,8 @@ structure indicating the existence of an improved model fit. It is possible
 that increasing the number of components will eventually resolve this
 under-fitting. However, we find in this case that a model with 3 shapelets,
 each having 5 components improves the fit; see \autoref{fig:fit-fixed}. Here,
-we simply demonstrate that a fit can be achieved, studying the optimal choice
-of model is a future research project.
+we simply demonstrate that a reasonable fit can be achieved, studying the
+optimal choice of model is a future research project.
 
 ![Top panel: the simulated data (blue), maximum likelihood fit (green), and 90\% confidence interval (C.I.) of the fit (orange) for the 20-component shapelet model fit. Bottom panel: the residual after removing the maximum likelihood (blue) and 90\% C.I uncertainty (orange). A grey region indicates the user-settable prior region for the pulse time of arrival. \label{fig:fit}](fit_with_data.png)
 
