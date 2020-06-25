@@ -1,4 +1,4 @@
-from bilby.core.prior import Prior, Uniform
+from bilby.core.prior import Prior, Uniform, ConditionalBeta, Beta
 
 
 class SpikeAndSlab(Prior):
@@ -67,3 +67,55 @@ class SpikeAndSlab(Prior):
             probs = self.slab.prob(val) * (1 - self.mix)
             probs[val == self.spike] = self.mix
             return probs
+
+
+class MinimumPrior(ConditionalBeta):
+    def __init__(self, order, minimum=0, maximum=1, name=None,
+                 minimum_spacing=0, latex_label=None, unit=None, boundary=None):
+        super().__init__(
+            alpha=1, beta=order, minimum=minimum, maximum=maximum,
+            name=name, latex_label=latex_label, unit=unit,
+            boundary=boundary, condition_func=self.minimum_condition
+        )
+        self.order = order
+        self.reference_name = self.name[:-1] + str(int(self.name[-1]) - 1)
+        self._required_variables = [self.reference_name]
+        self.minimum_spacing = minimum_spacing
+        self.__class__.__name__ == "MinimumPrior"
+
+    def minimum_condition(self, reference_params, **kwargs):
+        return dict(minimum=kwargs[self.reference_name] + self.minimum_spacing)
+
+    def __repr__(self):
+        return Prior.__repr__(self)
+
+    def get_instantiation_dict(self):
+        return Prior.get_instantiation_dict(self)
+
+
+def update_toa_prior(priors):
+    toa_keys = [key for key in priors if "toa" in key]
+    ntoa = len(toa_keys)
+    if ntoa == 1:
+        return priors
+    for ii, key in enumerate(toa_keys):
+        if ii > 0:
+            priors[key] = MinimumPrior(
+                order=ntoa - ii,
+                minimum_spacing=0,
+                minimum=priors[key].minimum,
+                maximum=priors[key].maximum,
+                name=key,
+                latex_label=priors[key].latex_label
+            )
+            priors[key].__class__.__name__ = "MinimumPrior"
+        else:
+            priors[key] = Beta(
+                minimum=priors[key].minimum,
+                maximum=priors[key].maximum,
+                alpha=1,
+                beta=ntoa,
+                name=key,
+                latex_label=priors[key].latex_label
+            )
+    return priors

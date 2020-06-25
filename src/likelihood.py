@@ -28,6 +28,9 @@ class PulsarLikelihood(bilby.core.likelihood.Likelihood):
         return self._noise_log_likelihood
 
     def log_likelihood(self):
+        toas = [x for k, x in self.parameters.items() if "toa" in k]
+        if any(np.diff(toas) < 0):
+            return np.nan_to_num(-np.inf)
         sigma = self.parameters["sigma"]
         residual = self.y - self.func(self.x, **self.parameters)
         log_l = np.sum(
