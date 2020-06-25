@@ -41,8 +41,10 @@ jobs:
     - name: Example test
       run: |
         pip install .
-        # Install the radid nestle sampler
+        # Install the nestle sampler
         pip install nestle
         cd examples/
+        # Create the fake data
         python make_fake_data.py
+        # Run the analysis
         kb_single_pulse fake_data.txt -p 0 -s 1 -b 0 --sampler nestle --nlive 250
