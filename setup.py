@@ -67,16 +67,16 @@ def readfile(filename):
     return filecontents
 
 
-VERSION = '0.1.0'
+VERSION = '0.2.0'
 version_file = write_version_file(VERSION)
 long_description = get_long_description()
 
 setup(name='kookaburra',
       description='Shapelet fitting for pulsars',
       long_description=long_description,
-      url='',
+      url='https://github.com/GregoryAshton/kookaburra',
       author='Greg Ashton',
-      author_email='greg.ashton@monash.edu',
+      author_email='gregory.ashton@ligo.org',
       license="MIT",
       version=VERSION,
       packages=['kookaburra'],
