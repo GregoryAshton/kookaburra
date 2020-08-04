@@ -1,6 +1,7 @@
 """ Command line tool for single-pulse shapelet analysis """
 import argparse
 import logging
+import os
 
 import bilby
 from scipy.stats import normaltest
@@ -78,6 +79,9 @@ def get_args():
 
     prior_parser = parser.add_argument_group("Prior options")
     prior_parser.add_argument(
+        "--prior-file", type=str, default=None, help="A prior file to overwrite the defaults"
+    )
+    prior_parser.add_argument(
         "--beta-min", type=float, default=None, help="Minimum beta value"
     )
     prior_parser.add_argument(
@@ -142,11 +146,21 @@ def get_sampler_kwargs(args):
     return run_sampler_kwargs
 
 
+def overwrite_with_prior_file(priors, prior_file):
+    if prior_file is not None and os.path.isfile(prior_file):
+        priors_from_file = bilby.core.prior.PriorDict(prior_file)
+        for key in priors_from_file:
+            if key in priors:
+                priors[key] = priors_from_file[key]
+    return priors
+
+
 def run_full_analysis(args, data, full_model, result_null):
 
     priors = full_model.get_priors(data)
     priors = add_sigma_prior(priors, data)
     priors = update_toa_prior(priors)
+    priors = overwrite_with_prior_file(priors, args.prior_file)
 
     # Pre-plot the data
     if args.plot_data:
@@ -201,6 +215,7 @@ def run_full_analysis(args, data, full_model, result_null):
 def run_null_analysis(args, data, null_model):
     priors = null_model.get_priors(data)
     priors = add_sigma_prior(priors, data)
+    priors = overwrite_with_prior_file(priors, args.prior_file)
 
     likelihood_null = PulsarLikelihood(data, null_model)
     result = bilby.sampler.run_sampler(
