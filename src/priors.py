@@ -31,7 +31,6 @@ class SpikeAndSlab(Prior):
         This maps to the inverse CDF. This has been analytically solved for this case,
 
         """
-        self.test_valid_for_rescaling(val)
 
         if isinstance(val, (float, int)):
             p = (val - self.mix) / (1 - self.mix)
