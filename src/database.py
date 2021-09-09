@@ -1,16 +1,14 @@
 import argparse
-import logging
 from pathlib import Path
+import sys
 
 import bilby
 import pandas as pd
 import tqdm
 
-logging.basicConfig(
-    level=logging.INFO,
-    datefmt="%H:%M",
-    format="%(asctime)s %(levelname)-2s: %(message)s",
-)
+
+logger = bilby.core.utils.logger
+logger.name = "kb"
 
 
 def main():
@@ -31,30 +29,36 @@ def main():
     database_file = directory.joinpath(args.filename)
     if args.clean is False and database_file.exists():
         df = pd.read_hdf(database_file, "kb_database")
-        logging.info(f"Read in database with {len(df)} records")
+        logger.info(f"Read in database with {len(df)} records")
     else:
         cols = ["filename", "pulse_number", "n_shapelets", "base_flux_n_polynomial"]
-        logging.info("Creating new database")
+        logger.info("Creating new database")
         df = pd.DataFrame(columns=cols)
 
     filenames = list(directory.glob("**/*result.json"))
     if len(filenames) == 0:
         raise ValueError("No results found to create/or add to database")
+    else:
+        logger.info(f"Found {len(filenames)} files to add to the database")
 
     # Get all filenames not already in the database
     filenames_to_read = []
     for filename in filenames:
-        if filename not in df.filename:
+        if str(filename) not in df.filename.values:
             filenames_to_read.append(filename)
 
-    logging.info(f"Adding {len(filenames_to_read)} files to the database")
+    if len(filenames_to_read) == 0:
+        logger.info("No new results to add to the database, exiting")
+        sys.exit()
+
+    logger.info(f"Adding {len(filenames_to_read)} files to the database")
     for ff in tqdm.tqdm(filenames_to_read):
         result = bilby.core.result.read_in_result(ff)
         data = dict(
             filename=str(ff),
             data_file=result.meta_data["args"]["data_file"],
             pulse_number=result.meta_data["args"]["pulse_number"],
-            n_shapelets=result.meta_data["args"]["n_shapelets"],
+            n_shapelets=str(result.meta_data["args"]["n_shapelets"]),
             base_flux_n_polynomial=result.meta_data["args"]["base_flux_n_polynomial"],
             maxl_normaltest_pvalue=result.meta_data["maxl_normaltest_pvalue"],
             log_evidence=result.log_evidence,
@@ -74,7 +78,12 @@ def main():
         series = pd.Series(data, name=result.label)
         df = df.append(series)
 
-    df.to_hdf(database_file, "kb_database")
+    df["pulse_number"] = df["pulse_number"].map(int)
+    df["data_file"] = df["data_file"].map(str)
+    df["n_shapelets"] = df["n_shapelets"].map(str)
+    df["base_flux_n_polynomial"] = df["base_flux_n_polynomial"].map(str)
+
+    df.to_hdf(database_file, "kb_database", format="table")
 
 
 if __name__ == "__main__":
