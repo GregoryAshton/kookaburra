@@ -29,13 +29,57 @@ class JointFluxModel(object):
             p.update(model.parameters)
         return p
 
+    @property
+    def parameter_keys(self):
+        keys = []
+        for model in self.models:
+            keys += list(model.parameters.keys())
+        return keys
+
     def get_priors(self, data):
         priors = PriorDict()
         for model in self.models:
             priors.update(model.get_priors(data))
         return priors
 
-    def __call__(self, time, **kwargs):
+    def __call__(self, time, *args, **kwargs):
+        """ Evaluate the flux model
+
+        This method can take *either* a tuple of positional arguments (with
+        the same length and orderng as `parameter_keys`) OR a dictionary
+        of parameters which updates the stores `parameters` dictionary.
+
+        Note: args and kwargs cannot be mixed.
+
+        Parameters
+        ----------
+        time: array_like
+            The times at which to evaluate the flux
+        args: tuple
+            If positional arguments are given, these are assumed to be
+            in the same order as `parameter_keys` and the same length.
+            A dictionary of parameters will be created from these and
+            then the flux returned.
+        kwargs: dict
+            If key-word arguments are given, the parameters dictionary
+            is updated and then the predicted flux returned.
+
+        Returns
+        -------
+        flux: array_like
+            The predicted flux
+
+        """
+
+        if len(args) > 0 and len(kwargs) > 0:
+            raise ValueError("Cannot mix args and kwargs")
+        elif len(args) > 0:
+            if len(args) == len(self.parameter_keys):
+                # Assume given in the correct order
+                kwargs = {key: val for key, val in zip(self.parameter_keys, args)}
+            else:
+                raise ValueError(f"args has length {len(args)}, but there are {len(self.parameter_keys)} parameters")
+
         fluxes = [model(time, **kwargs) for model in self.models]
         return np.sum(fluxes, axis=0)
 
