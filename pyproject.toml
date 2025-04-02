@@ -7,7 +7,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "sbilby"
+name = "kookaburra"
 authors = [{name = "Greg Ashton"}]
 dynamic = ["version", "description"]
 classifiers = [
@@ -24,3 +24,6 @@ Issues = "TBD"
 
 [tool.setuptools_scm]
 version_file = "src/kookaburra/_version.py"
+
+[project.scripts]
+kb_single_pulse = "kookaburra.single_pulse:main"
