@@ -157,6 +157,41 @@ class TimeDomainData:
         return cls._sort_and_filter_dataframe(df, pulse_number)
 
     @classmethod
+    def from_pulsar(cls, filename, pulse_number=None):
+        """ Read in the time and flux using PSRCHIVE
+
+        Parameters
+        ----------
+        filename: str
+            The path to the file to read
+        pulse_number: int:
+            The pulse number to select from the file: if this is not given the
+            entire data file is used.
+        """
+        import psrchive
+
+        arch = psrchive.Archive_load(filename)  # Read in the data
+        arch.centre()  # Centre each pulse
+        arch.remove_baseline()  # Remove the baseline
+        arch.pscrunch()  # Crunch in polarisation
+        arch.fscrunch()  # Crunch in frequency
+
+        flux = np.squeeze(arch.get_data())
+        npulses, nbins = flux.shape
+        fluxs = flux.reshape((-1))  # Flatten to flux vs bins
+
+        # Calculate the times for each flux measurement
+        start_time = arch.start_time().in_days()
+        P0 =  1 / float(arch.get_ephemeris().get_value("F0"))
+        times = np.arange(0, npulses * P0, P0/nbins) + start_time
+
+        pulse_numbers = np.floor((times - start_time) / P0).astype(int)
+
+        df = pd.DataFrame(dict(time=times, flux=fluxs, pulse_number=pulse_numbers))
+        return cls._sort_and_filter_dataframe(df, pulse_number)
+
+
+    @classmethod
     def from_file(cls, filename, pulse_number=None):
         """ Read in the time and flux from a file
 
@@ -173,10 +208,13 @@ class TimeDomainData:
             entire data file is used.
 
         """
+
         if "h5" in filename:
             return cls.from_h5(filename, pulse_number)
-        else:
+        elif "csv" in filename:
             return cls.from_csv(filename, pulse_number)
+        else:
+            return cls.from_pulsar(filename, pulse_number)
 
     @classmethod
     def from_h5(cls, filename, pulse_number=None):
